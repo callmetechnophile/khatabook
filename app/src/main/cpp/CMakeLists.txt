@@ -48,3 +48,25 @@ target_link_libraries(
     log
     android
 )
+
+# Map Android ABI to Rust target triple
+if(${ANDROID_ABI} STREQUAL "arm64-v8a")
+    set(RUST_TARGET "aarch64-linux-android")
+elseif(${ANDROID_ABI} STREQUAL "armeabi-v7a")
+    set(RUST_TARGET "armv7-linux-androideabi")
+elseif(${ANDROID_ABI} STREQUAL "x86_64")
+    set(RUST_TARGET "x86_64-linux-android")
+else()
+    set(RUST_TARGET "aarch64-linux-android")
+endif()
+
+set(RUST_STATIC_LIB ${CMAKE_CURRENT_SOURCE_DIR}/../../../../rust-engine/target/${RUST_TARGET}/release/librust_khatawas.a)
+
+# Create shared library for Rust Engine JNI bridge
+add_library(rust_khatawas SHARED rust_jni_bridge.cpp)
+target_link_libraries(
+    rust_khatawas
+    PRIVATE
+    ${RUST_STATIC_LIB}
+    log
+)

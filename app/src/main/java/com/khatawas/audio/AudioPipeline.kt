@@ -202,8 +202,12 @@ class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
                     System.arraycopy(inFloats, 0, outFloats, 0, FRAME_SIZE_480)
                 }
 
-                // 48 kHz -> 16 kHz decimation with 31-tap FIR low-pass filter
-                val outputSamples = resampler.process(outFloats, resampledFloats)
+                // 48 kHz -> 16 kHz decimation with 31-tap FIR low-pass filter (Rust native engine with Kotlin fallback)
+                val outputSamples = if (com.khatawas.rust.RustEngine.isNativeLoaded()) {
+                    com.khatawas.rust.RustEngine.nativeFirProcess(outFloats, resampledFloats)
+                } else {
+                    resampler.process(outFloats, resampledFloats)
+                }
                 if (outputSamples != SAMPLES_16K) {
                     Log.e(TAG, "Resampler output mismatch: expected $SAMPLES_16K, got $outputSamples")
                     continue

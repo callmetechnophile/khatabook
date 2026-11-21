@@ -9,3 +9,7 @@
 .externalNativeBuild
 .cxx
 .vscode/
+
+# Rust build artifacts
+target/
+rust-engine/target/
