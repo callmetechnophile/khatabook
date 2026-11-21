@@ -1,175 +1,435 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0c0b0a" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23c2410c'/%3E%3Crect x='25' y='12' width='14' height='26' rx='7' fill='white'/%3E%3Cpath d='M17 30a15 15 0 0 0 30 0M32 45v8' stroke='white' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
-<title>KHATAWAS</title>
-<style>
-/* Layout: one calm column. Translucent header over scrolling content, one big control, grouped lists. Tokens first. */
-:root {
-  --bg: #f2f2f7; --surface: #ffffff; --surface-2: #f7f7fa; --fg: #1b1612; --mute: #6e6a64; --line: #e3e0da;
-  --accent: #e8890c; --accent-ink: #1b1612; --accent-soft: #fdeed6; --bad: #b3261e; --good: #1f7a3d;
-  --glass: rgba(242,242,247,.72); --scrim: rgba(20,16,12,.36); --shadow: 0 10px 30px rgba(40,28,10,.12);
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Kannada", "Noto Sans Tamil", "Noto Sans Telugu", sans-serif;
-}
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0c0b0a; --surface: #1c1a18; --surface-2: #232120; --fg: #f4efe8; --mute: #a39c92; --line: #2e2b28;
-  --accent: #f5a524; --accent-soft: #3a2a10; --bad: #ff8a80; --good: #6fd08c; --glass: rgba(12,11,10,.72); --scrim: rgba(0,0,0,.55); --shadow: 0 10px 30px rgba(0,0,0,.5); color-scheme: dark; } }
-:root[data-theme="dark"] {
-  --bg: #0c0b0a; --surface: #1c1a18; --surface-2: #232120; --fg: #f4efe8; --mute: #a39c92; --line: #2e2b28;
-  --accent: #f5a524; --accent-soft: #3a2a10; --bad: #ff8a80; --good: #6fd08c; --glass: rgba(12,11,10,.72); --scrim: rgba(0,0,0,.55); --shadow: 0 10px 30px rgba(0,0,0,.5); color-scheme: dark; }
-
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { background: var(--bg); color: var(--fg); font: 400 1rem/1.45 var(--font); padding-block: 0 6rem;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.col { max-width: 30rem; margin: 0 auto; display: flex; flex-direction: column; gap: 1.25rem; }
-button { font: inherit; color: inherit; }
-:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
-
-/* header: a translucent layer; content scrolls under it */
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 20; background: var(--glass); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
-header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
-  padding: .75rem max(16px, env(safe-area-inset-left, 0px)); background: var(--glass); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
-header .in { max-width: 30rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
-.brand { font-size: 1.375rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
-.brand small { display: block; font-size: .75rem; font-weight: 500; letter-spacing: .01em; color: var(--mute); margin-top: .15rem; }
-.lang { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .8rem; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: .9375rem; cursor: pointer; transition: transform 100ms ease-out; }
-.lang:active, .chip:active, .opt:active, .row-btn:active { transform: scale(.97); }
-.lang svg { width: 14px; height: 14px; opacity: .6; }
-
-.banner { font-size: .8125rem; color: var(--mute); text-align: center; padding-top: .25rem; }
-
-/* conversation */
-.thread { display: flex; flex-direction: column; gap: .5rem; min-height: 9.5rem; }
-.bubble { max-width: 88%; padding: .7rem .95rem; border-radius: 1.25rem; font-size: 1.0625rem; line-height: 1.4; animation: rise 320ms cubic-bezier(.2,.9,.25,1) both; overflow-wrap: anywhere; }
-.bubble.me { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: .4rem; font-weight: 500; }
-.bubble.bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: .4rem; }
-.meta { font-size: .75rem; color: var(--mute); margin: 0 .35rem; display: flex; gap: .5rem; flex-wrap: wrap; }
-.meta.r { align-self: flex-end; }
-.note { align-self: flex-start; font-size: .8125rem; color: var(--mute); margin: -.1rem .35rem 0; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-.undo { border: 0; background: var(--accent-soft); color: var(--fg); font-weight: 600; border-radius: 99px; padding: .3rem .7rem; cursor: pointer; font-size: .8125rem; }
-@keyframes rise { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
-.opts { display: flex; gap: .5rem; flex-wrap: wrap; align-self: flex-start; }
-.opt { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: .55rem .95rem; font-weight: 600; cursor: pointer; transition: transform 100ms ease-out; }
-
-/* the one big control */
-.mic-wrap { display: grid; place-items: center; gap: .65rem; padding: .5rem 0 0; }
-.mic { position: relative; width: 7.75rem; height: 7.75rem; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none;
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 45%, transparent); transition: transform 120ms ease-out, box-shadow 120ms ease-out; }
-.mic svg { width: 2.4rem; height: 2.4rem; }
-.mic.on { transform: scale(.95); box-shadow: 0 0 0 .8rem color-mix(in srgb, var(--accent) 22%, transparent), 0 0 0 1.7rem color-mix(in srgb, var(--accent) 10%, transparent); }
-.bars { display: none; gap: 4px; align-items: center; height: 2.4rem; }
-.mic.on svg { display: none; } .mic.on .bars { display: flex; }
-.bars i { width: 5px; border-radius: 3px; background: var(--accent-ink); height: 30%; animation: bar 900ms ease-in-out infinite; }
-.bars i:nth-child(2) { animation-delay: -.2s; } .bars i:nth-child(3) { animation-delay: -.45s; } .bars i:nth-child(4) { animation-delay: -.1s; } .bars i:nth-child(5) { animation-delay: -.6s; }
-@keyframes bar { 50% { height: 100%; } }
-.hint { font-size: .9375rem; color: var(--mute); font-weight: 500; min-height: 1.4em; text-align: center; }
-
-.chips { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: none; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding-inline: max(16px, env(safe-area-inset-left, 0px)); }
-.chips::-webkit-scrollbar { display: none; }
-.chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: .5rem .85rem; font-size: .875rem; cursor: pointer; transition: transform 100ms ease-out; text-align: left; }
-.chip b { display: block; font-size: .6875rem; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); font-weight: 600; }
-
-/* grouped list */
-.sec-h { display: flex; align-items: baseline; justify-content: space-between; margin: 0 .25rem .5rem; }
-.sec-h h2 { margin: 0; font-size: .8125rem; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); font-weight: 600; }
-.sec-h span { font-variant-numeric: tabular-nums; font-weight: 600; font-size: .9375rem; }
-.list { background: var(--surface); border-radius: 1.1rem; overflow: hidden; border: 1px solid var(--line); }
-.row { display: flex; align-items: center; gap: .8rem; padding: .75rem .9rem; border-bottom: 1px solid var(--line); }
-.row:last-child { border-bottom: 0; }
-.av { flex: none; width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .95rem; color: #fff; }
-.who { flex: 1; min-width: 0; }
-.who b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.who small { color: var(--mute); font-size: .8125rem; }
-.amt { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.0625rem; }
-.amt.owes { color: var(--bad); } .amt.zero { color: var(--mute); font-weight: 500; }
-.row.flash { animation: flash 1.1s ease-out; }
-@keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
-.add { display: flex; gap: .5rem; margin-top: .6rem; }
-.add input { flex: 1; min-width: 0; padding: .7rem .9rem; border-radius: .9rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; }
-.add button, .primary { padding: .7rem 1.1rem; border-radius: .9rem; border: 0; background: var(--fg); color: var(--bg); font-weight: 600; cursor: pointer; }
-.dup { font-size: .8125rem; color: var(--mute); margin: .5rem .25rem 0; }
-
-footer { margin-top: .5rem; font-size: .8125rem; color: var(--mute); display: flex; flex-direction: column; gap: .35rem; align-items: center; text-align: center; }
-.row-btn { background: none; border: 0; color: var(--bad); font-weight: 600; cursor: pointer; padding: .4rem .6rem; }
-
-/* language sheet: follows the finger 1:1, then flies on with the release velocity */
-.scrim { position: fixed; inset: 0; background: var(--scrim); opacity: 0; pointer-events: none; z-index: 30; }
-.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-width: 32rem; margin: 0 auto; background: var(--surface); border-radius: 1.5rem 1.5rem 0 0; box-shadow: var(--shadow);
-  padding: .5rem max(16px, env(safe-area-inset-left, 0px)) calc(1rem + env(safe-area-inset-bottom, 0px)); transform: translateY(105%); will-change: transform; touch-action: none; visibility: hidden; }
-.grab { width: 2.5rem; height: .3rem; border-radius: 3px; background: var(--line); margin: .25rem auto .75rem; }
-.sheet h3 { margin: 0 .25rem .25rem; font-size: 1.125rem; letter-spacing: -.01em; }
-.sheet p { margin: 0 .25rem .85rem; color: var(--mute); font-size: .875rem; }
-.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; max-height: 52vh; overflow-y: auto; touch-action: pan-y; }
-.l { border: 1px solid var(--line); background: var(--surface-2); border-radius: .95rem; padding: .7rem .85rem; text-align: left; cursor: pointer; min-width: 0; transition: transform 100ms ease-out; }
-.l:active { transform: scale(.97); }
-.l b { display: block; font-size: 1.0625rem; font-weight: 600; }
-.l small { color: var(--mute); font-size: .75rem; }
-.l[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
-.l.auto { grid-column: 1 / -1; }
-
-@media (prefers-reduced-motion: reduce) {
-  .bubble { animation: none; } .bars i { animation: none; height: 60%; } .row.flash { animation: none; }
-  .mic, .lang, .chip, .opt, .l { transition: none; }
-}
-@media (prefers-reduced-transparency: reduce) { header, body::before { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; } }
-
-.mode { font-size: .75rem; }
-.empty { color: var(--mute); font-size: 1rem; padding: 1.25rem .5rem; text-align: center; }
-.try-row { display:flex; gap:.5rem; margin-top:.6rem; }
-.try-row input { flex:1; min-width:0; padding:.7rem .9rem; border-radius:.9rem; border:1px solid var(--line); background:var(--surface); color:var(--fg); font:inherit; }
-.try-row button { padding:.7rem 1.1rem; border-radius:.9rem; border:0; background:var(--fg); color:var(--bg); font-weight:600; cursor:pointer; }
-.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#060608" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+  <meta name="description" content="KHATAWAS — A rural-first, voice-driven digital udhaar ledger for Indian shopkeepers. Spoken in your language. Encrypted on your device.">
+  <title>KHATAWAS — Every transaction has a story</title>
+  
+  <link rel="icon" type="image/png" href="/assets/khatawas-icon.png">
+  <link rel="stylesheet" href="/landing.css">
 </head>
 <body>
-<header><div class="in">
-  <div class="brand">Khatawas<small id="sub">Voice ledger for your kirana store</small></div>
-  <button class="lang" id="langBtn" aria-haspopup="dialog" aria-label="Change language"><span id="langName">हिन्दी</span>
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
-</div></header>
 
-<main class="col">
-  <section class="thread" id="thread" aria-live="polite"></section>
+  <!-- =========================================================================
+       Navigation Header (Frosted Glass Translucent Blur)
+       ========================================================================= -->
+  <header class="nav-header">
+    <div class="nav-container">
+      <a href="/" class="brand-lockup" aria-label="KHATAWAS Homepage">
+        <img src="/assets/khatawas-icon.png" alt="KHATAWAS Icon" class="brand-icon" width="36" height="36">
+        <div class="brand-text">
+          <span class="brand-title">KHATAWAS <span class="devanagari">खातावास</span></span>
+          <span class="brand-subtitle">Voice Ledger for Bharat</span>
+        </div>
+      </a>
+      
+      <nav class="nav-actions" aria-label="Page Navigation">
+        <a href="#story" class="nav-link-subtle">The Story</a>
+        <a href="#destinations" class="nav-cta-pill">Get Started</a>
+      </nav>
+    </div>
+  </header>
 
-  <section class="mic-wrap">
-    <button class="mic" id="ptt" aria-label="Hold to talk">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm6-4a1 1 0 1 1 2 0 8 8 0 0 1-7 7.94V21h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2.06A8 8 0 0 1 4 11a1 1 0 1 1 2 0 6 6 0 0 0 12 0z"/></svg>
-      <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
-    </button>
-    <div class="hint" id="hint">Hold to talk</div>
-  </section>
+  <main class="page-wrapper">
 
-  <section>
-    <div class="sec-h"><h2>Try saying</h2></div>
-    <div class="chips" id="chips"></div>
-    <form class="try-row" id="typed"><label class="sr" for="txt">Type instead</label><input id="txt" placeholder="or type: Ramesh ka 340 udhaar" autocomplete="off"><button>Send</button></form>
-  </section>
+    <!-- =========================================================================
+         ACT 1: Opening Viewport — The Story Begins
+         ========================================================================= -->
+    <section class="hero-viewport" id="hero" aria-labelledby="heroHeadline">
+      <div class="hero-ambient-glow" aria-hidden="true"></div>
+      
+      <div class="section-container hero-content">
+        <div class="hero-badge reveal">
+          <span class="hero-badge-pulse" aria-hidden="true"></span>
+          <span>Purpose-Built for Indian Kirana & Small Retail</span>
+        </div>
 
-  <section>
-    <div class="sec-h"><h2>Customers</h2><span id="total"></span></div>
-    <div class="list" id="list"></div>
-    <form class="add" id="addcust"><label class="sr" for="newcust">Customer name</label><input id="newcust" placeholder="Add a customer" autocomplete="off"><button>Add</button></form>
-    <div class="dup" id="dup" hidden></div>
-  </section>
+        <h1 class="hero-headline reveal" id="heroHeadline">
+          Every transaction <br>
+          <span class="gradient-text">has a story.</span>
+        </h1>
 
-  <footer>
-    <div>I am an AI assistant. Your ledger is encrypted on this device (AES-256-GCM).</div>
-    <div class="mode" id="mode"></div>
-    <button class="row-btn" id="wipe">Delete all data</button>
+        <p class="hero-supporting-text reveal">
+          From the first udhaar to the final payment, KHATAWAS helps you keep every promise, every customer, and every rupee accounted for.
+        </p>
+
+        <!-- Strong Visual Focal Point: Live Voice Ledger Stage -->
+        <div class="hero-stage reveal" aria-label="Spoken Transaction Preview">
+          <div class="hero-voice-simulation">
+            <div class="simulation-bubble">
+              <svg class="simulation-mic-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm6-4a1 1 0 1 1 2 0 8 8 0 0 1-7 7.94V21h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2.06A8 8 0 0 1 4 11a1 1 0 1 1 2 0 6 6 0 0 0 12 0z"/>
+              </svg>
+              <span>“रमेश का 340 रुपये उधार लिखो”</span>
+              <div class="simulation-waveform" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+
+            <div class="simulation-result-card">
+              <div class="sim-user-info">
+                <div class="sim-avatar">R</div>
+                <div class="sim-details">
+                  <b>Ramesh (रमेश)</b>
+                  <span>Sub-second local parsing • Zero typing required</span>
+                </div>
+              </div>
+              <div class="sim-amount">
+                <span class="badge-credit">Udhaar (Credit)</span>
+                <div class="amt-number">+ ₹340.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scroll Continue Cue -->
+        <a href="#story" class="hero-scroll-cue reveal" aria-label="Scroll down to read the story">
+          <span>Scroll to explore</span>
+          <div class="scroll-mouse" aria-hidden="true">
+            <div class="scroll-wheel"></div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         ACT 2: The Everyday Reality — The Problem of Paper Khata
+         ========================================================================= -->
+    <section class="story-section" id="story" aria-labelledby="realityHeadline">
+      <div class="section-container">
+        <span class="section-tag reveal">01 / The Everyday Reality</span>
+        <h2 class="section-headline reveal" id="realityHeadline">
+          Pages fade. Memories get tested. <br>
+          Trust shouldn't.
+        </h2>
+        
+        <div class="editorial-grid-2col">
+          <div class="editorial-narrative reveal">
+            <p class="story-lead-p">
+              In the morning rush of a neighborhood grocery store, five customers ask for ration at once. Hands are dusted with flour; time is short.
+            </p>
+            <p class="story-body-p">
+              Traditional paper notebooks (bahi-khata) have served India for centuries, but daily store life takes its toll. Incomplete entries, ink smeared by spilled tea, loose slips of paper, and calculations done in haste lead to quiet doubts and awkward month-end disputes.
+            </p>
+            <p class="story-body-p">
+              Small retailers do not lose money because they lack customers. They lose money because small credit slips slip through the cracks unremembered.
+            </p>
+          </div>
+
+          <div class="reality-card-stack reveal">
+            <div class="reality-card">
+              <div class="reality-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+              </div>
+              <div class="reality-card-content">
+                <h3>The Fragility of Paper</h3>
+                <p>Physical ledgers tear, fade, and cannot be searched or backed up. A single lost book erases months of credit records.</p>
+              </div>
+            </div>
+
+            <div class="reality-card">
+              <div class="reality-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <div class="reality-card-content">
+                <h3>The Awkward Misunderstanding</h3>
+                <p>When handwriting is ambiguous or an entry is overlooked, asking a loyal neighbor to pay twice tests community relationships.</p>
+              </div>
+            </div>
+
+            <div class="reality-card">
+              <div class="reality-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                  <line x1="6" y1="12" x2="10" y2="12"></line>
+                </svg>
+              </div>
+              <div class="reality-card-content">
+                <h3>The Typing Dilemma</h3>
+                <p>Modern accounting apps force store owners to navigate ten nested menus and type names on small phone screens while customers wait.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         ACT 3: The Turning Point — What a Real Ledger Needs
+         ========================================================================= -->
+    <section class="story-section" id="turning-point" aria-labelledby="turningHeadline">
+      <div class="section-container">
+        <span class="section-tag reveal">02 / The Turning Point</span>
+        <h2 class="section-headline reveal" id="turningHeadline">
+          You shouldn't have to choose <br>
+          between typing and serving.
+        </h2>
+        <p class="section-description reveal">
+          A digital ledger for everyday Indian commerce must feel as effortless as speaking across the counter, as immediate as cash, and as private as a personal vault.
+        </p>
+
+        <div class="pillars-grid">
+          <div class="pillar-card reveal">
+            <span class="pillar-number">01</span>
+            <div class="pillar-icon-box" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+              </svg>
+            </div>
+            <h3>Spoken, Not Typed</h3>
+            <p>
+              Simply hold the button and speak naturally in Hindi, Kannada, Tamil, or English. Speak full transactions, payments, or balance inquiries in one fluid sentence.
+            </p>
+          </div>
+
+          <div class="pillar-card reveal">
+            <span class="pillar-number">02</span>
+            <div class="pillar-icon-box" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+              </svg>
+            </div>
+            <h3>100% Offline-First</h3>
+            <p>
+              Zero dependency on spotty 2G mobile data or cloud roundtrips. Every credit and debit entry is committed instantly to encrypted on-device storage.
+            </p>
+          </div>
+
+          <div class="pillar-card reveal">
+            <span class="pillar-number">03</span>
+            <div class="pillar-icon-box" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+            <h3>Private by Default</h3>
+            <p>
+              Protected with AES-256 local database encryption. Balances are masked from wandering eyes, and financial data is never mined for behavioral advertising.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         ACT 4: The Solution — KHATAWAS in Action
+         ========================================================================= -->
+    <section class="story-section" id="solution" aria-labelledby="solutionHeadline">
+      <div class="section-container">
+        <span class="section-tag reveal">03 / The Solution</span>
+        <h2 class="section-headline reveal" id="solutionHeadline">
+          Meet KHATAWAS. <br>
+          Engineered for Bharat. Polished for clarity.
+        </h2>
+        <p class="section-description reveal">
+          An original technological approach combining regional voice recognition, deterministic language understanding, and cryptographic ledger safety.
+        </p>
+
+        <div class="solution-showcase reveal">
+          <div class="solution-header-row">
+            <div>
+              <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.35rem;">Live Multi-Language Understanding</h3>
+              <p style="color: var(--text-secondary); font-size: 0.95rem;">Select an everyday spoken phrase to inspect instant parsing:</p>
+            </div>
+
+            <!-- Language Switcher Tabs -->
+            <div class="solution-tabs" role="tablist" aria-label="Select sample language">
+              <button class="tab-btn is-active" data-lang="hi" role="tab" aria-selected="true">हिन्दी (Hindi)</button>
+              <button class="tab-btn" data-lang="kn" role="tab" aria-selected="false">ಕನ್ನಡ (Kannada)</button>
+              <button class="tab-btn" data-lang="hinglish" role="tab" aria-selected="false">Hinglish</button>
+            </div>
+          </div>
+
+          <div class="solution-stage-layout">
+            <div class="solution-demo-panel">
+              <span class="section-tag" style="margin: 0;">Spoken Voice Utterance</span>
+              <div class="demo-voice-prompt" id="demoSpokenText">
+                “रमेश का 340 रुपये उधार लिखो”
+              </div>
+
+              <div class="demo-pipeline-steps">
+                <div class="pipeline-step">
+                  <span class="pipeline-step-badge">Identified Customer</span>
+                  <span id="demoCustomerName" style="color: var(--text-primary); font-weight: 600;">Ramesh (रमेश)</span>
+                </div>
+                <div class="pipeline-step">
+                  <span class="pipeline-step-badge">Transaction Type</span>
+                  <span id="demoTransactionType" style="color: var(--danger); font-weight: 600; background: var(--danger-soft); padding: 0.15rem 0.5rem; border-radius: 4px;">Udhaar (Credit)</span>
+                </div>
+                <div class="pipeline-step">
+                  <span class="pipeline-step-badge">Amount Detected</span>
+                  <span id="demoAmountNumber" style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; color: var(--danger);">₹340.00</span>
+                </div>
+                <div class="pipeline-step">
+                  <span class="pipeline-step-badge">Deterministic Ledger State</span>
+                  <span id="demoActionStatus" style="color: var(--text-secondary);">Booked to Ramesh • Due updated</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Product Visual -->
+            <div class="solution-mockup-frame">
+              <img src="/assets/2-credit.png" alt="KHATAWAS Application Screen showing Credit Transaction" width="480" height="800" loading="lazy">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         ACT 5: The Two Primary Destinations (The Climax & Core Choice)
+         ========================================================================= -->
+    <section class="story-section destinations-section" id="destinations" aria-labelledby="destinationsHeadline">
+      <div class="section-container">
+        <div class="destinations-header reveal">
+          <span class="section-tag">04 / Choose Your Destination</span>
+          <h2 class="section-headline" id="destinationsHeadline">
+            Two ways to experience KHATAWAS.
+          </h2>
+          <p class="section-description" style="margin: 0 auto;">
+            Explore the deployed web application right now in your browser, or inspect the native Android repository and download its release.
+          </p>
+        </div>
+
+        <!-- The Exactly TWO Primary Destination Cards -->
+        <div class="destinations-grid">
+          
+          <!-- OPTION 1 — WEBSITE -->
+          <a href="https://khatawas.onrender.com/" class="destination-card reveal" target="_blank" rel="noopener noreferrer" aria-label="Explore KHATAWAS Web Application">
+            <div>
+              <div class="dest-top-row">
+                <div class="dest-icon-container" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                  </svg>
+                </div>
+                <span class="dest-badge">Web Application</span>
+              </div>
+
+              <div class="dest-content">
+                <h3 class="dest-title">Explore KHATAWAS</h3>
+                <p class="dest-description">
+                  Open the KHATAWAS web application. Test regional voice recognition, spoken corrections, and multilingual ledgering directly from any desktop or mobile browser.
+                </p>
+              </div>
+            </div>
+
+            <div class="dest-footer">
+              <span class="dest-action-btn">
+                Launch Deployed Site
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </span>
+              <span class="dest-meta">khatawas.onrender.com</span>
+            </div>
+          </a>
+
+          <!-- OPTION 2 — ANDROID APP -->
+          <a href="https://github.com/callmetechnophile/khatabook" class="destination-card reveal" target="_blank" rel="noopener noreferrer" aria-label="Get the Android App on GitHub">
+            <div>
+              <div class="dest-top-row">
+                <div class="dest-icon-container" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="2" width="14" height="20" rx="3"></rect>
+                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                  </svg>
+                </div>
+                <span class="dest-badge">Native Android App</span>
+              </div>
+
+              <div class="dest-content">
+                <h3 class="dest-title">Get the Android App</h3>
+                <p class="dest-description">
+                  Explore the Android application and download its available release. Built with offline-first SQLCipher AES-256 encryption, local INT8 models, and high-contrast rural UI.
+                </p>
+              </div>
+            </div>
+
+            <div class="dest-footer">
+              <span class="dest-action-btn">
+                View on GitHub
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </span>
+              <span class="dest-meta">GitHub Releases & APK Guide</span>
+            </div>
+          </a>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       Footer: Minimal Editorial Layout
+       ========================================================================= -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-top-row">
+        <div class="footer-brand">
+          <h4>KHATAWAS खातावास</h4>
+          <p>
+            The rural-first, privacy-focused digital ledger for Indian shopkeepers. Keeping every promise, customer, and rupee accounted for.
+          </p>
+        </div>
+
+        <div class="footer-nav-groups">
+          <div class="footer-nav-col">
+            <h5>Product</h5>
+            <ul>
+              <li><a href="https://khatawas.onrender.com/" target="_blank" rel="noopener noreferrer">Explore Web App</a></li>
+              <li><a href="https://github.com/callmetechnophile/khatabook" target="_blank" rel="noopener noreferrer">Android Repository</a></li>
+              <li><a href="/app">Launch Local Web Demo</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-nav-col">
+            <h5>Architecture</h5>
+            <ul>
+              <li><a href="https://github.com/callmetechnophile/khatabook#readme" target="_blank" rel="noopener noreferrer">Security & Privacy</a></li>
+              <li><a href="https://github.com/callmetechnophile/khatabook#readme" target="_blank" rel="noopener noreferrer">Offline-First Design</a></li>
+              <li><a href="https://github.com/callmetechnophile/khatabook/releases" target="_blank" rel="noopener noreferrer">Releases & Verification</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom-row">
+        <div>
+          &copy; 2026 KHATAWAS. Designed for Bharat. Free and open source.
+        </div>
+        <div class="footer-meta-notes">
+          <span>AES-256 SQLCipher Local Storage</span>
+          <span>Zero Ad Trackers</span>
+          <span>Sub-Second Edge Audio</span>
+        </div>
+      </div>
+    </div>
   </footer>
-</main>
 
-<div class="scrim" id="scrim"></div>
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetT">
-  <div class="grab" id="grab"></div>
-  <h3 id="sheetT">Language</h3>
-  <p>Speak and hear replies in your own language. Auto-detect works out the language from your voice.</p>
-  <div class="grid" id="grid"></div>
-</div>
-<script type="module" src="/app.js"></script>
+  <script src="/landing.js" defer></script>
 </body>
 </html>

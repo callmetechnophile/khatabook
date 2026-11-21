@@ -69,7 +69,7 @@ const server = http.createServer(async (req, res) => {
     } catch { res.writeHead(502); return res.end('{}'); }
   }
   // static: /src/* from repo src, everything else from public/
-  const rel = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
+  const rel = url.pathname === '/' ? 'index.html' : (url.pathname === '/app' ? 'app.html' : url.pathname.slice(1));
   const base = rel.startsWith('src/') ? root : path.join(root, 'public');
   const file = path.normalize(path.join(base, rel));
   if (!file.startsWith(base) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found'); }
