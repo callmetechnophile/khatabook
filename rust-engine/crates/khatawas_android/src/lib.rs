@@ -40,7 +40,15 @@ pub struct JNINativeInterface {
     pub set_float_array_region: unsafe extern "system" fn(JNIEnv, JFloatArray, i32, i32, *const f32), // 213
 }
 
-static GLOBAL_FIR: Mutex<Option<FirDecimator3>> = Mutex::new(None);
+const FIR_HANDLE_MAGIC: u32 = 0x4B485457; // 'KHTW'
+
+#[repr(C)]
+struct FirHandle {
+    magic: u32,
+    decimator: FirDecimator3,
+}
+
+static FALLBACK_FIR: Mutex<Option<FirDecimator3>> = Mutex::new(None);
 
 /// JNI function returning Rust engine version string.
 #[no_mangle]
@@ -76,7 +84,122 @@ pub extern "system" fn Java_com_khatawas_rust_RustEngine_nativeHealthCheck(
     1
 }
 
-/// JNI FIR decimation processing (48 kHz -> 16 kHz).
+// ---------------------------------------------------------------------------
+// Milestone 3: Lifecycle-safe Stateful FIR Decimator Handle Management
+// ---------------------------------------------------------------------------
+
+/// Initialize an isolated, stateful FIR decimator instance.
+/// Returns an opaque 64-bit handle.
+#[no_mangle]
+pub extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirInit(
+    _env: JNIEnv,
+    _class: JClass,
+) -> i64 {
+    let handle = Box::new(FirHandle {
+        magic: FIR_HANDLE_MAGIC,
+        decimator: FirDecimator3::new(),
+    });
+    Box::into_raw(handle) as i64
+}
+
+/// Process a streaming PCM frame through an existing FIR decimator handle.
+/// Zero heap allocations in steady-state operation (uses stack buffer for standard frames).
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirProcessHandle(
+    env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+    input_arr: JFloatArray,
+    output_arr: JFloatArray,
+) -> i32 {
+    if handle == 0 || env.is_null() || input_arr.is_null() || output_arr.is_null() {
+        return 0;
+    }
+
+    let ptr = handle as *mut FirHandle;
+    if (*ptr).magic != FIR_HANDLE_MAGIC {
+        return -1; // Corrupted or invalid handle
+    }
+    let handle_ref = &mut *ptr;
+
+    let iface = **env;
+    let in_len = (iface.get_array_length)(env, input_arr);
+    let out_len = (iface.get_array_length)(env, output_arr);
+    if in_len <= 0 || out_len <= 0 {
+        return 0;
+    }
+
+    let in_usize = in_len as usize;
+    let out_usize = out_len as usize;
+
+    let mut in_stack = [0.0f32; 1024];
+    let mut out_stack = [0.0f32; 512];
+    let (mut in_heap, mut out_heap);
+
+    let in_slice: &mut [f32] = if in_usize <= in_stack.len() {
+        &mut in_stack[..in_usize]
+    } else {
+        in_heap = vec![0.0f32; in_usize];
+        &mut in_heap[..]
+    };
+
+    let out_slice: &mut [f32] = if out_usize <= out_stack.len() {
+        &mut out_stack[..out_usize]
+    } else {
+        out_heap = vec![0.0f32; out_usize];
+        &mut out_heap[..]
+    };
+
+    (iface.get_float_array_region)(env, input_arr, 0, in_len, in_slice.as_mut_ptr());
+
+    let written = handle_ref.decimator.process(in_slice, out_slice);
+
+    if written > 0 {
+        (iface.set_float_array_region)(env, output_arr, 0, written as i32, out_slice.as_ptr());
+    }
+
+    written as i32
+}
+
+/// Reset filter history and phase without destroying the allocated instance.
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirResetHandle(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+) -> u8 {
+    if handle == 0 {
+        return 0;
+    }
+    let ptr = handle as *mut FirHandle;
+    if (*ptr).magic != FIR_HANDLE_MAGIC {
+        return 0;
+    }
+    (*ptr).decimator.reset();
+    1
+}
+
+/// Destroy and safely deallocate the FIR decimator instance.
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirDestroyHandle(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+) -> u8 {
+    if handle == 0 {
+        return 0;
+    }
+    let ptr = handle as *mut FirHandle;
+    if (*ptr).magic == FIR_HANDLE_MAGIC {
+        (*ptr).magic = 0; // Invalidate magic immediately to guard against double-free
+        let _ = Box::from_raw(ptr);
+        1
+    } else {
+        0
+    }
+}
+
+/// Legacy single-call FIR process convenience method (backed by lazy static fallback).
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirProcess(
     env: JNIEnv,
@@ -94,19 +217,37 @@ pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirProcess
         return 0;
     }
 
-    let mut in_buf = vec![0.0f32; in_len as usize];
-    let mut out_buf = vec![0.0f32; out_len as usize];
+    let in_usize = in_len as usize;
+    let out_usize = out_len as usize;
 
-    (iface.get_float_array_region)(env, input_arr, 0, in_len, in_buf.as_mut_ptr());
+    let mut in_stack = [0.0f32; 1024];
+    let mut out_stack = [0.0f32; 512];
+    let (mut in_heap, mut out_heap);
 
-    let mut guard = GLOBAL_FIR.lock().unwrap();
+    let in_slice: &mut [f32] = if in_usize <= in_stack.len() {
+        &mut in_stack[..in_usize]
+    } else {
+        in_heap = vec![0.0f32; in_usize];
+        &mut in_heap[..]
+    };
+
+    let out_slice: &mut [f32] = if out_usize <= out_stack.len() {
+        &mut out_stack[..out_usize]
+    } else {
+        out_heap = vec![0.0f32; out_usize];
+        &mut out_heap[..]
+    };
+
+    (iface.get_float_array_region)(env, input_arr, 0, in_len, in_slice.as_mut_ptr());
+
+    let mut guard = FALLBACK_FIR.lock().unwrap();
     if guard.is_none() {
         *guard = Some(FirDecimator3::new());
     }
 
-    let written = guard.as_mut().unwrap().process(&in_buf, &mut out_buf);
+    let written = guard.as_mut().unwrap().process(in_slice, out_slice);
     if written > 0 {
-        (iface.set_float_array_region)(env, output_arr, 0, written as i32, out_buf.as_ptr());
+        (iface.set_float_array_region)(env, output_arr, 0, written as i32, out_slice.as_ptr());
     }
 
     written as i32

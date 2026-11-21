@@ -40,7 +40,16 @@ object RustEngine {
     external fun nativeGetVersion(): String
     external fun nativeAdd(a: Int, b: Int): Int
     external fun nativeHealthCheck(): Boolean
+
+    // Milestone 3: Stateful FIR Handle Management
+    external fun nativeFirInit(): Long
+    external fun nativeFirProcessHandle(handle: Long, input: FloatArray, output: FloatArray): Int
+    external fun nativeFirResetHandle(handle: Long): Boolean
+    external fun nativeFirDestroyHandle(handle: Long): Boolean
+
+    // Legacy / Convenience FIR Process
     external fun nativeFirProcess(input: FloatArray, output: FloatArray): Int
+
     external fun nativeParseUtterance(utterance: String): String
     external fun nativeCalculateBalance(credits: LongArray, payments: LongArray, reversals: LongArray): Long
 }

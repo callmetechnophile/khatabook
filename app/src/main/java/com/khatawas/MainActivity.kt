@@ -79,6 +79,8 @@ class MainActivity : AppCompatActivity() {
 
         // Phase 5 Runtime JNI Verification for Milestone 2
         runMilestone2Verification()
+        // Phase 5 Runtime JNI Verification for Milestone 3 (Rust FIR Decimator)
+        runMilestone3Verification()
 
         appOrchestrator = AppOrchestrator(this)
         audioPipeline = AudioPipeline(appOrchestrator.rnnoiseProcessor)
@@ -379,6 +381,27 @@ class MainActivity : AppCompatActivity() {
             }
         }
         Log.i("KHATAWAS_M2_VERIFICATION", "=== END MILESTONE 2 JNI RUNTIME VERIFICATION ===")
+    }
+
+    private fun runMilestone3Verification() {
+        Log.i("KHATAWAS_M3_VERIFICATION", "=== BEGIN MILESTONE 3 FIR RUNTIME VERIFICATION ===")
+        try {
+            val rustFir = com.khatawas.audio.RustFirDecimator()
+            Log.i("KHATAWAS_M3_VERIFICATION", "RustFirDecimator initialized, isNativeActive = ${rustFir.isNativeActive}")
+
+            val input = FloatArray(480) { 1000.0f }
+            val output = FloatArray(160)
+            val written = rustFir.process(input, output)
+            Log.i("KHATAWAS_M3_VERIFICATION", "Processed 480 input samples -> $written output samples, out[0]=${output[0]}, out[159]=${output[159]}")
+
+            rustFir.reset()
+            Log.i("KHATAWAS_M3_VERIFICATION", "RustFirDecimator reset successful")
+            rustFir.close()
+            Log.i("KHATAWAS_M3_VERIFICATION", "RustFirDecimator closed cleanly, isNativeActive = ${rustFir.isNativeActive}")
+        } catch (e: Throwable) {
+            Log.e("KHATAWAS_M3_VERIFICATION", "Milestone 3 runtime verification failed", e)
+        }
+        Log.i("KHATAWAS_M3_VERIFICATION", "=== END MILESTONE 3 FIR RUNTIME VERIFICATION ===")
     }
 
     override fun onDestroy() {

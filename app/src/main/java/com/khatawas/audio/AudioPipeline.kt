@@ -164,7 +164,7 @@ class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
         val inFloats = FloatArray(FRAME_SIZE_480)
         val outFloats = FloatArray(FRAME_SIZE_480)
         val resampledFloats = FloatArray(SAMPLES_16K)
-        val resampler = FirDecimator3()
+        val resampler = FirDecimatorFactory.create()
 
         try {
             while (isRecording && audioRecord === record) {
@@ -202,12 +202,8 @@ class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
                     System.arraycopy(inFloats, 0, outFloats, 0, FRAME_SIZE_480)
                 }
 
-                // 48 kHz -> 16 kHz decimation with 31-tap FIR low-pass filter (Rust native engine with Kotlin fallback)
-                val outputSamples = if (com.khatawas.rust.RustEngine.isNativeLoaded()) {
-                    com.khatawas.rust.RustEngine.nativeFirProcess(outFloats, resampledFloats)
-                } else {
-                    resampler.process(outFloats, resampledFloats)
-                }
+                // 48 kHz -> 16 kHz decimation with 31-tap FIR low-pass filter (Rust native engine with Kotlin rollback)
+                val outputSamples = resampler.process(outFloats, resampledFloats)
                 if (outputSamples != SAMPLES_16K) {
                     Log.e(TAG, "Resampler output mismatch: expected $SAMPLES_16K, got $outputSamples")
                     continue
@@ -228,6 +224,10 @@ class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception in processAudioLoop: ${e.message}", e)
+        } finally {
+            try {
+                resampler.close()
+            } catch (_: Exception) {}
         }
     }
 }
