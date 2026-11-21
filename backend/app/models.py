@@ -24,6 +24,9 @@ class SyncEventItem(BaseModel):
     type: str # 'CREDIT', 'PAYMENT', 'REVERSAL'
     timestamp: int # epoch millis
     note: Optional[str] = ""
+    event_hash: Optional[str] = None
+    previous_event_hash: Optional[str] = None
+    schema_version: Optional[int] = 1
 
 class SyncBatchRequest(BaseModel):
     shop_id: str
@@ -34,12 +37,14 @@ class SyncEventResult(BaseModel):
     event_id: str
     status: str # 'ACCEPTED', 'DUPLICATE_ACCEPTED', 'REJECTED'
     server_timestamp: str
+    error_message: Optional[str] = None
 
 class SyncBatchResponse(BaseModel):
     batch_id: str
     status: str
     ingested_count: int
     duplicate_count: int
+    rejected_count: int = 0
     results: List[SyncEventResult]
     customer_balances: Dict[str, int]
 

@@ -3,10 +3,35 @@ KHATAWAS Backend - SurrealDB Client & Cloud Persistence Layer
 Manages permanent documents, graph relationships, and 24-hour temporary event projections.
 """
 
+import hashlib
+import json
 import threading
 import time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Tuple, Any
+
+def compute_canonical_hash(ev: Dict[str, Any]) -> str:
+    amount_paise = int(ev.get("amount_paise", 0))
+    customer_name = str(ev.get("customer_name", "")).trim() if hasattr(str(ev.get("customer_name", "")), "trim") else str(ev.get("customer_name", "")).strip()
+    event_id = str(ev.get("event_id", "")).strip()
+    note = str(ev.get("note") or "")
+    prev_hash = str(ev.get("previous_event_hash") or "0000000000000000000000000000000000000000000000000000000000000000")
+    schema_version = int(ev.get("schema_version") or 1)
+    timestamp = int(ev.get("timestamp", 0))
+    tx_type = str(ev.get("type", "")).strip().upper()
+
+    canonical_dict = {
+        "amount_paise": amount_paise,
+        "customer_name": customer_name,
+        "event_id": event_id,
+        "note": note,
+        "previous_event_hash": prev_hash,
+        "schema_version": schema_version,
+        "timestamp": timestamp,
+        "type": tx_type
+    }
+    canonical_str = json.dumps(canonical_dict, separators=(',', ':'), sort_keys=True)
+    return hashlib.sha256(canonical_str.encode('utf-8')).hexdigest()
 
 class SurrealCloudStore:
     """
@@ -73,6 +98,19 @@ class SurrealCloudStore:
                 now_utc = datetime.now(timezone.utc)
                 now_iso = now_utc.isoformat()
 
+                # Verify event digest integrity if event_hash is provided
+                provided_hash = ev.get("event_hash")
+                if provided_hash:
+                    expected_hash = compute_canonical_hash(ev)
+                    if provided_hash.lower() != expected_hash.lower():
+                        results.append({
+                            "event_id": event_id,
+                            "status": "REJECTED",
+                            "server_timestamp": now_iso,
+                            "error_message": f"Event digest verification failed. Expected {expected_hash}, received {provided_hash}"
+                        })
+                        continue
+
                 # Idempotency check: if event_id already ingested, return DUPLICATE_ACCEPTED
                 if event_id in self.transactions:
                     results.append({
@@ -90,7 +128,7 @@ class SurrealCloudStore:
                 amount_paise = int(ev["amount_paise"])
                 tx_type = ev["type"].upper()
 
-                # Permanent transaction record
+                # Permanent transaction record with hash chain
                 tx_record = {
                     "event_id": event_id,
                     "shop_id": shop_id,
@@ -100,6 +138,9 @@ class SurrealCloudStore:
                     "type": tx_type,
                     "timestamp": ev.get("timestamp", int(time.time() * 1000)),
                     "note": ev.get("note", ""),
+                    "event_hash": provided_hash or compute_canonical_hash(ev),
+                    "previous_event_hash": ev.get("previous_event_hash", "0000000000000000000000000000000000000000000000000000000000000000"),
+                    "schema_version": ev.get("schema_version", 1),
                     "server_ingested_at": now_iso
                 }
                 self.transactions[event_id] = tx_record

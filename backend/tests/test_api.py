@@ -115,3 +115,61 @@ def test_daily_graph_projections_and_cleanup():
     res_ledger = client.get(f"/api/v1/customers/Ramesh/ledger?shop_id={shop_id}", headers=AUTH_HEADER)
     assert res_ledger.status_code == 200
     assert len(res_ledger.json()["transactions"]) >= 2
+
+def test_event_digest_verification_and_tamper_rejection():
+    shop_id = "shop:test_kirana"
+    
+    # Valid canonical event
+    from backend.app.surreal_client import compute_canonical_hash
+    valid_event = {
+        "event_id": "test-uuid-crypto-01",
+        "customer_name": "Mahesh",
+        "amount_paise": 75000,
+        "type": "CREDIT",
+        "timestamp": 1732206000000,
+        "note": "Mahesh udhaar",
+        "previous_event_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "schema_version": 1
+    }
+    valid_event["event_hash"] = compute_canonical_hash(valid_event)
+
+    # Tampered event: amount modified without recalculating hash
+    tampered_event = {
+        "event_id": "test-uuid-tampered-02",
+        "customer_name": "Dinesh",
+        "amount_paise": 99999, # Tampered amount
+        "type": "CREDIT",
+        "timestamp": 1732206100000,
+        "note": "Tampered record",
+        "previous_event_hash": valid_event["event_hash"],
+        "event_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", # invalid hash
+        "schema_version": 1
+    }
+
+    payload = {
+        "shop_id": shop_id,
+        "batch_id": "batch-crypto-test",
+        "events": [valid_event, tampered_event]
+    }
+
+    response = client.post("/api/v1/sync/batch", json=payload, headers=AUTH_HEADER)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ingested_count"] == 1
+    assert data["rejected_count"] == 1
+
+    # Verify result statuses
+    r_valid = next(r for r in data["results"] if r["event_id"] == "test-uuid-crypto-01")
+    assert r_valid["status"] == "ACCEPTED"
+
+    r_tampered = next(r for r in data["results"] if r["event_id"] == "test-uuid-tampered-02")
+    assert r_tampered["status"] == "REJECTED"
+    assert "verification failed" in r_tampered["error_message"].lower()
+
+    # Verify tampered event was NOT applied to customer balances
+    res_cust = client.get(f"/api/v1/customers?shop_id={shop_id}", headers=AUTH_HEADER)
+    assert res_cust.status_code == 200
+    cust_names = [c["name"] for c in res_cust.json()["customers"]]
+    assert "Mahesh" in cust_names
+    assert "Dinesh" not in cust_names # Dinesh must NOT be created because tampered event was rejected!
+

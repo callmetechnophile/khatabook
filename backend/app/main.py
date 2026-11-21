@@ -65,12 +65,14 @@ def sync_batch(request: SyncBatchRequest, token: str = Depends(verify_auth)):
 
     ingested = sum(1 for r in results if r["status"] == "ACCEPTED")
     duplicates = sum(1 for r in results if r["status"] == "DUPLICATE_ACCEPTED")
+    rejected = sum(1 for r in results if r["status"] == "REJECTED")
 
     return SyncBatchResponse(
         batch_id=request.batch_id,
         status="PROCESSED",
         ingested_count=ingested,
         duplicate_count=duplicates,
+        rejected_count=rejected,
         results=[SyncEventResult(**r) for r in results],
         customer_balances=balances
     )

@@ -20,7 +20,9 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -39,10 +41,14 @@ import com.khatawas.auth.BiometricAuthHelper
 import com.khatawas.auth.PrivacyManager
 import com.khatawas.core.AppOrchestrator
 import com.khatawas.sync.SyncManager
+import com.khatawas.sync.SyncState
 import com.khatawas.ui.IndianCurrencyFormatter
 import com.khatawas.ui.TransactionAdapter
 import com.khatawas.ui.TransactionCategory
 import com.khatawas.ui.TransactionUiModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
@@ -69,6 +75,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var tvConnection: TextView
     private lateinit var tvSyncStatus: TextView
+    private lateinit var tvSyncSubtitle: TextView
+    private lateinit var btnCloudSync: ImageButton
+    private lateinit var pbSyncProgress: ProgressBar
     private lateinit var tvTranscript: TextView
     private lateinit var tvResult: TextView
     private lateinit var tvResultDetail: TextView
@@ -143,12 +152,19 @@ class MainActivity : AppCompatActivity() {
         tvStatus = findViewById(R.id.tv_status)
         tvConnection = findViewById(R.id.tv_connection)
         tvSyncStatus = findViewById(R.id.tv_sync_status)
+        tvSyncSubtitle = findViewById(R.id.tv_sync_subtitle)
+        btnCloudSync = findViewById(R.id.btn_cloud_sync)
+        pbSyncProgress = findViewById(R.id.pb_sync_progress)
         tvTranscript = findViewById(R.id.tv_transcript)
         tvResult = findViewById(R.id.tv_result)
         tvResultDetail = findViewById(R.id.tv_result_detail)
         switchRnnoise = findViewById(R.id.switch_rnnoise)
         btnAiDisclosure = findViewById(R.id.btn_ai_disclosure)
         btnPurgeData = findViewById(R.id.btn_purge_data)
+
+        btnCloudSync.setOnClickListener {
+            triggerCloudBackup()
+        }
 
         // Customer Ledger & Transaction History UI initialization
         tvLedgerHeader = findViewById(R.id.tv_ledger_header)
@@ -191,7 +207,12 @@ class MainActivity : AppCompatActivity() {
                 tvSyncStatus.text = status
             }
         }
-        syncManager.startSyncLoop()
+        syncManager.onSyncStateChanged = { state ->
+            runOnUiThread {
+                updateSyncUi(state)
+            }
+        }
+        updateSyncUi(syncManager.getCurrentSyncState())
 
         audioPipeline.onPcm16kReady = { chunk ->
             gnaniSttClient?.sendAudioChunk(chunk)
@@ -202,8 +223,8 @@ class MainActivity : AppCompatActivity() {
             cachedLatestAmountString = "${transaction.name}  ·  ${IndianCurrencyFormatter.formatPaise(transaction.amountPaise)}"
             cachedLatestDetailString = "$direction  •  Date offset: ${transaction.dateOffset} day(s)"
             tvStatus.text = "Saved to your local encrypted ledger."
-            syncManager.triggerImmediateSync()
-            refreshLedgerAndTransactions(currentFilteredCustomer)
+            updateSyncUi(syncManager.getCurrentSyncState())
+            refreshLedgerAndTransactions(null)
         }
 
         appOrchestrator.onBatchTransactionsSaved = { transactions, netBalancePaise ->
@@ -211,8 +232,8 @@ class MainActivity : AppCompatActivity() {
             cachedLatestAmountString = "${transactions.first().name}  ·  $count entries"
             cachedLatestDetailString = "Net outstanding balance: ${IndianCurrencyFormatter.formatPaise(netBalancePaise)}"
             tvStatus.text = "Multiple transactions saved to local ledger."
-            syncManager.triggerImmediateSync()
-            refreshLedgerAndTransactions(currentFilteredCustomer)
+            updateSyncUi(syncManager.getCurrentSyncState())
+            refreshLedgerAndTransactions(null)
         }
 
         appOrchestrator.onQueryResult = { customer, balancePaise ->
@@ -326,7 +347,7 @@ class MainActivity : AppCompatActivity() {
                     cachedBalancePaise = 0L
                     tvStatus.text = "Local database purged successfully."
                     tvTranscript.text = "Nothing recognized yet."
-                    syncManager.triggerImmediateSync()
+                    updateSyncUi(syncManager.getCurrentSyncState())
                     refreshLedgerAndTransactions(null)
                     updatePrivacyUi()
                     Toast.makeText(this, "Data purged successfully", Toast.LENGTH_SHORT).show()
@@ -335,6 +356,69 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .show()
+    }
+
+    /**
+     * Explicit user-triggered backup to SurrealDB Cloud.
+     */
+    fun triggerCloudBackup() {
+        val unsynced = appOrchestrator.ledgerDatabase.getUnsyncedCount()
+        updateSyncUi(SyncState.Syncing(unsynced))
+        syncManager.performManualBackup { state ->
+            runOnUiThread {
+                updateSyncUi(state)
+                if (state is SyncState.Success || state is SyncState.PartialFailure) {
+                    refreshLedgerAndTransactions(currentFilteredCustomer)
+                }
+            }
+        }
+    }
+
+    /**
+     * Render the visual state of the cloud backup system according to SyncState.
+     */
+    fun updateSyncUi(state: SyncState) {
+        when (state) {
+            is SyncState.Idle -> {
+                btnCloudSync.isEnabled = true
+                pbSyncProgress.visibility = View.GONE
+                if (state.unsyncedCount > 0) {
+                    tvSyncStatus.text = "☁ SURREALDB BACKUP PENDING"
+                    tvSyncSubtitle.text = "${state.unsyncedCount} unsynced local record(s) · Tap sync to backup"
+                } else {
+                    tvSyncStatus.text = "☁ SURREALDB CLOUD"
+                    val timeStr = if (state.lastSyncedTimestamp != null) {
+                        SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()).format(Date(state.lastSyncedTimestamp))
+                    } else "All records backed up"
+                    tvSyncSubtitle.text = "● All records backed up · Last sync: $timeStr"
+                }
+            }
+            is SyncState.Syncing -> {
+                btnCloudSync.isEnabled = false
+                pbSyncProgress.visibility = View.VISIBLE
+                tvSyncStatus.text = "☁ BACKING UP TO CLOUD..."
+                tvSyncSubtitle.text = "Uploading ${state.totalToSync} record(s) to SurrealDB Cloud..."
+            }
+            is SyncState.Success -> {
+                btnCloudSync.isEnabled = true
+                pbSyncProgress.visibility = View.GONE
+                val timeStr = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()).format(Date(state.timestamp))
+                tvSyncStatus.text = "☁ CLOUD BACKUP SUCCESSFUL"
+                tvSyncSubtitle.text = "Synced: $timeStr (${state.syncedCount} uploaded, ${state.duplicateCount} duplicate acknowledged)"
+            }
+            is SyncState.PartialFailure -> {
+                btnCloudSync.isEnabled = true
+                pbSyncProgress.visibility = View.GONE
+                tvSyncStatus.text = "⚠️ BACKUP PARTIAL FAILURE"
+                tvSyncSubtitle.text = "${state.failedCount} records failed · Tap to retry (${state.errorMessage})"
+            }
+            is SyncState.Offline -> {
+                btnCloudSync.isEnabled = true
+                pbSyncProgress.visibility = View.GONE
+                tvSyncStatus.text = "⚡ OFFLINE MODE"
+                tvSyncSubtitle.text = "Device is offline. Local ledger is safe (${state.unsyncedCount} unsynced). Tap to retry when online."
+            }
+        }
     }
 
     private fun startListening() {

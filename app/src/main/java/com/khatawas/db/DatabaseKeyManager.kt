@@ -27,6 +27,14 @@ object DatabaseKeyManager {
     private var cachedPassphrase: ByteArray? = null
 
     /**
+     * Clear cached passphrase in memory. Visible for testing.
+     */
+    @Synchronized
+    fun clearCacheForTesting() {
+        cachedPassphrase = null
+    }
+
+    /**
      * Retrieve the 256-bit database passphrase.
      * Generates and securely stores a new key if no key exists.
      * Fails closed if EncryptedSharedPreferences cannot be initialized.
@@ -63,7 +71,17 @@ object DatabaseKeyManager {
 
         var keyHex = securePrefs.getString(KEY_ALIAS_DB_SECRET, null)
         if (keyHex == null) {
-            // Generate a 256-bit cryptographically secure random key
+            // Strict fail-closed rule: if khatawas.db exists on disk, do NOT generate a new random key!
+            // Generating a new key would orphan existing encrypted data and cause unrecoverable data loss.
+            val dbFile = appContext.getDatabasePath("khatawas.db")
+            if (dbFile != null && dbFile.exists() && dbFile.length() > 0) {
+                throw SecurityException(
+                    "Database file exists at ${dbFile.absolutePath} (${dbFile.length()} bytes) but Keystore decryption key is missing. " +
+                            "Refusing to generate a new key to prevent permanent data loss or database wipe."
+                )
+            }
+
+            // Generate a 256-bit cryptographically secure random key for brand new database
             val randomBytes = ByteArray(KEY_SIZE_BYTES)
             SecureRandom().nextBytes(randomBytes)
             keyHex = bytesToHex(randomBytes)
