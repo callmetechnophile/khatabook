@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
  * Simplified Technical English (ASD STE-100) compliant.
- * Native Android TextToSpeech engine wrapper with volume ducking.
+ * Localized Android TextToSpeech engine with thread-safe volume ducking.
  */
 
 package com.khatawas.audio
@@ -12,15 +12,20 @@ import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.util.Log
 import com.khatawas.logic.Transaction
 import java.util.Locale
 
 /**
- * Audio feedback manager using Android native TextToSpeech.
- * Provides voice confirmation for Kirana store ledger operations.
- * Manages audio volume ducking to ensure clear voice output in loud environments.
+ * Voice feedback manager using Android native TextToSpeech.
+ * Provides localized audio confirmation for ledger transactions.
+ * Uses AudioManager to duck media volume during audio playback.
  */
 class VoiceFeedback(context: Context) : TextToSpeech.OnInitListener {
+
+    companion object {
+        private const val TAG = "VoiceFeedback"
+    }
 
     private val appContext = context.applicationContext ?: context
     private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -31,10 +36,10 @@ class VoiceFeedback(context: Context) : TextToSpeech.OnInitListener {
     private var isTtsReady = false
 
     private var originalVolume: Int = -1
-    private var pendingUtterance: String? = null
+    private var pendingMessage: String? = null
 
     init {
-        // Ensure TextToSpeech initialization runs on the Android main thread
+        // Initialize TextToSpeech engine on the main thread
         if (Looper.myLooper() == Looper.getMainLooper()) {
             initTts()
         } else {
@@ -43,7 +48,7 @@ class VoiceFeedback(context: Context) : TextToSpeech.OnInitListener {
     }
 
     /**
-     * Initialize TextToSpeech engine on the main thread.
+     * Create the TextToSpeech instance on the main thread.
      */
     private fun initTts() {
         tts = TextToSpeech(appContext, this)
@@ -53,88 +58,98 @@ class VoiceFeedback(context: Context) : TextToSpeech.OnInitListener {
         if (status == TextToSpeech.SUCCESS) {
             val ttsEngine = tts
             if (ttsEngine != null) {
-                // Set Hindi language if available, fallback to default locale
+                // Set language to Hindi (India). Fallback to English on missing data or unsupported locale.
                 val hindiLocale = Locale("hi", "IN")
                 val langResult = ttsEngine.setLanguage(hindiLocale)
                 if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    ttsEngine.language = Locale.getDefault()
+                    Log.w(TAG, "Hindi locale not supported. Fallback to English.")
+                    ttsEngine.setLanguage(Locale.ENGLISH)
+                } else {
+                    Log.i(TAG, "TTS initialized with Hindi (India) locale.")
                 }
 
-                // Register listener to restore music volume when speech finishes
+                // Register listener to restore music volume after speech completes
                 ttsEngine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
-                        // Speech playback started
+                        Log.d(TAG, "TTS playback started: $utteranceId")
                     }
 
                     override fun onDone(utteranceId: String?) {
-                        restoreVolume()
+                        Log.d(TAG, "TTS playback completed: $utteranceId")
+                        restoreOriginalVolume()
                     }
 
                     @Deprecated("Deprecated in Java")
                     override fun onError(utteranceId: String?) {
-                        restoreVolume()
+                        Log.e(TAG, "TTS playback error for utterance: $utteranceId")
+                        restoreOriginalVolume()
                     }
 
                     override fun onError(utteranceId: String?, errorCode: Int) {
-                        restoreVolume()
+                        Log.e(TAG, "TTS playback error code $errorCode for utterance: $utteranceId")
+                        restoreOriginalVolume()
                     }
                 })
 
                 isTtsReady = true
 
-                // Speak any message queued before engine initialization completed
-                pendingUtterance?.let { queuedText ->
-                    pendingUtterance = null
+                // Speak any queued message waiting for engine initialization
+                pendingMessage?.let { queuedText ->
+                    pendingMessage = null
                     speak(queuedText)
                 }
             }
+        } else {
+            Log.e(TAG, "TextToSpeech initialization failed with status: $status")
         }
     }
 
     /**
-     * Speak confirmation for a stored ledger transaction.
-     * Constructs natural Hindi sentence from customer name, amount, and type.
-     * Can be called safely from background audio processing threads.
+     * Speak confirmation sentence for a ledger transaction.
+     * Sentence format: "${transaction.name} ka ${transaction.amount} ${transaction.type} likh liya".
      *
-     * Parameter transaction: Stored ledger transaction data class.
+     * Parameter transaction: The ledger transaction data class instance.
      */
     fun speakConfirmation(transaction: Transaction) {
-        // Map transaction type enum to code-mixed speech word
-        val typeSpeechWord = when (transaction.type.uppercase(Locale.ROOT)) {
-            "CREDIT" -> "udhaar"
-            "DEBIT" -> "jama"
-            else -> transaction.type.lowercase(Locale.ROOT)
-        }
-
-        // Construct exact confirmation sentence
-        val confirmationMessage = "${transaction.name} ka ${transaction.amount} $typeSpeechWord likh liya"
-        speak(confirmationMessage)
+        val spokenText = "${transaction.name} ka ${transaction.amount} ${transaction.type} likh liya"
+        Log.i(TAG, "Speaking confirmation: $spokenText")
+        speak(spokenText)
     }
 
     /**
-     * Speak text with automatic volume ducking.
-     * Can be invoked from any thread.
+     * Speak a text message with volume ducking.
+     * Thread-safe. Dispatches playback to the main thread handler.
      *
-     * Parameter text: The text message to speak.
+     * Parameter text: The text string to speak.
      */
     fun speak(text: String) {
         mainHandler.post {
             if (!isTtsReady) {
-                pendingUtterance = text
+                Log.w(TAG, "TTS engine not ready. Message queued: $text")
+                pendingMessage = text
                 return@post
             }
 
-            // Set media volume to maximum before speaking
+            // Set media volume to maximum before calling speak
             duckVolumeToMax()
 
             val utteranceId = "CONFIRM_${System.currentTimeMillis()}"
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+            try {
+                val result = tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+                if (result != TextToSpeech.SUCCESS) {
+                    Log.e(TAG, "Failed to queue TTS utterance. Restoring volume.")
+                    restoreOriginalVolume()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception during tts.speak(): ${e.message}", e)
+                restoreOriginalVolume()
+            }
         }
     }
 
     /**
-     * Increase STREAM_MUSIC volume to maximum.
-     * Stores original volume to restore after speech completes.
+     * Set STREAM_MUSIC volume to maximum.
+     * Saves previous volume level to restore after speech playback.
      */
     @Synchronized
     private fun duckVolumeToMax() {
@@ -144,36 +159,44 @@ class VoiceFeedback(context: Context) : TextToSpeech.OnInitListener {
             }
             val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVolume, 0)
-        } catch (_: Exception) {
-            // Protect against platform audio service errors
+            Log.d(TAG, "Ducked STREAM_MUSIC volume to max ($maxVolume). Original was $originalVolume.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error while ducking volume: ${e.message}", e)
         }
     }
 
     /**
-     * Restore STREAM_MUSIC volume to the original level.
+     * Restore STREAM_MUSIC volume to the saved level.
+     * Uses try-catch to prevent leaving user volume permanently maxed on errors.
      */
     @Synchronized
-    private fun restoreVolume() {
+    private fun restoreOriginalVolume() {
         try {
             if (originalVolume != -1) {
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVolume, 0)
+                Log.d(TAG, "Restored STREAM_MUSIC volume to $originalVolume.")
                 originalVolume = -1
             }
-        } catch (_: Exception) {
-            // Protect against platform audio service errors
+        } catch (e: Exception) {
+            Log.e(TAG, "Error while restoring volume: ${e.message}", e)
         }
     }
 
     /**
-     * Stop speech and free engine resources.
+     * Stop speech playback and release native engine resources.
      */
     fun shutdown() {
         mainHandler.post {
-            restoreVolume()
-            tts?.stop()
-            tts?.shutdown()
-            tts = null
-            isTtsReady = false
+            restoreOriginalVolume()
+            try {
+                tts?.stop()
+                tts?.shutdown()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during TTS shutdown: ${e.message}", e)
+            } finally {
+                tts = null
+                isTtsReady = false
+            }
         }
     }
 }

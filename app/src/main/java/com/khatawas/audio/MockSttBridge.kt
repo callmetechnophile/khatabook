@@ -1,68 +1,77 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
  * Simplified Technical English (ASD STE-100) compliant.
- * Mock Speech-To-Text (STT) bridge for offline pipeline integration.
+ * Mock Speech-To-Text (STT) bridge for end-to-end pipeline validation.
  */
 
 package com.khatawas.audio
 
-import com.khatawas.db.LedgerDatabase
-import com.khatawas.logic.LedgerParser
-import com.khatawas.logic.Transaction
+import android.util.Log
+import com.khatawas.core.AppOrchestrator
 
 /**
  * Mock STT bridge.
- * Mocks the Gnani Prisma streaming speech recognition API.
- * Converts speech text to a Transaction and writes the record to the database.
+ * Simulates streaming speech transcripts from the Gnani Prisma speech engine.
+ * Dispatches test utterances to AppOrchestrator to verify parser, database, and TTS.
  * Does not make external network requests.
  */
-class MockSttBridge(private val database: LedgerDatabase) {
+class MockSttBridge(private val orchestrator: AppOrchestrator) {
 
     /**
-     * Process recognized speech text.
-     * Parses the utterance using deterministic Regex.
-     * Stores the transaction in the encrypted SQLite database.
-     *
-     * Parameter text: Speech recognition transcript.
-     * Returns Transaction if parsed and written to database, null otherwise.
+     * Run the complete pipeline test using three hardcoded Kirana store utterances.
+     * 1. "Ramesh ka 340 udhaar" (Credit transaction)
+     * 2. "Suresh ko 200 diya" (Debit transaction)
+     * 3. "Kal wala 500 jama" (Debit transaction with -1 day offset)
      */
-    fun simulateSttInput(text: String): Transaction? {
-        return processAndInsert(text, database)
+    fun runPipelineTest() {
+        Log.i(TAG, "Starting Mock STT pipeline test with 3 test utterances...")
+
+        // Utterance 1: Credit transaction with explicit digits
+        Log.d(TAG, "Dispatching test utterance 1: \"Ramesh ka 340 udhaar\"")
+        orchestrator.processMockTransaction("Ramesh ka 340 udhaar")
+
+        // Utterance 2: Debit transaction with explicit digits
+        Log.d(TAG, "Dispatching test utterance 2: \"Suresh ko 200 diya\"")
+        orchestrator.processMockTransaction("Suresh ko 200 diya")
+
+        // Utterance 3: Debit transaction with relative date offset
+        Log.d(TAG, "Dispatching test utterance 3: \"Kal wala 500 jama\"")
+        orchestrator.processMockTransaction("Kal wala 500 jama")
+
+        Log.i(TAG, "All test utterances dispatched to AppOrchestrator.")
     }
 
     companion object {
+        private const val TAG = "MockSttBridge"
+
         @Volatile
-        private var defaultDatabase: LedgerDatabase? = null
+        private var defaultOrchestrator: AppOrchestrator? = null
 
         /**
-         * Initialize the default database instance for static calls.
+         * Initialize the default orchestrator instance for static invocation.
          */
-        fun init(database: LedgerDatabase) {
-            defaultDatabase = database
+        fun init(orchestrator: AppOrchestrator) {
+            defaultOrchestrator = orchestrator
         }
 
         /**
-         * Static bridge method to process speech input.
-         * Parameter text: Speech recognition transcript.
-         * Returns Transaction if parsed and written to database, null otherwise.
+         * Static runner for pipeline test using the initialized default orchestrator.
          */
-        fun simulateSttInput(text: String): Transaction? {
-            val db = defaultDatabase
-                ?: throw IllegalStateException("MockSttBridge default database is not initialized.")
-            return processAndInsert(text, db)
+        fun runPipelineTest() {
+            val orchestrator = defaultOrchestrator
+                ?: throw IllegalStateException("MockSttBridge default orchestrator is not initialized.")
+            orchestrator.processMockTransaction("Ramesh ka 340 udhaar")
+            orchestrator.processMockTransaction("Suresh ko 200 diya")
+            orchestrator.processMockTransaction("Kal wala 500 jama")
         }
 
         /**
-         * Internal helper to parse utterance and insert record into database.
+         * Static runner accepting an explicit AppOrchestrator instance.
          */
-        private fun processAndInsert(text: String, db: LedgerDatabase): Transaction? {
-            val transaction = LedgerParser.parseUtterance(text) ?: return null
-            val rowId = db.insertTransaction(transaction)
-            return if (rowId > 0L) {
-                transaction
-            } else {
-                null
-            }
+        fun runPipelineTest(orchestrator: AppOrchestrator) {
+            orchestrator.processMockTransaction("Ramesh ka 340 udhaar")
+            orchestrator.processMockTransaction("Suresh ko 200 diya")
+            orchestrator.processMockTransaction("Kal wala 500 jama")
         }
     }
 }
