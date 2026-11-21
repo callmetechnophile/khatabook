@@ -1,35 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="20dp">
 
-    <!-- Massive Push-To-Talk Button -->
-    <Button
-        android:id="@+id/btn_push_to_talk"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:backgroundTint="#FFEB3B"
-        android:text="PUSH TO TALK"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        app:backgroundTint="#FFEB3B" />
-
-    <!-- High-Contrast Status Display for Parsed Ledger Transactions -->
-    <TextView
-        android:id="@+id/tv_status"
+    <!-- A/B Noise Suppression Toggle in Top-Right Corner -->
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/switch_rnnoise"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:gravity="center"
-        android:text=""
-        android:textColor="#00FF00"
-        android:textSize="24sp"
-        android:textStyle="bold" />
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:checked="true"
+        android:text="RNNoise ON"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:thumbTint="#00FF00"
+        app:trackTint="#333333" />
 
-</LinearLayout>
+    <!-- Center Container for PTT Button and Status -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <!-- Massive Push-To-Talk Button -->
+        <Button
+            android:id="@+id/btn_push_to_talk"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:backgroundTint="#FFEB3B"
+            android:text="PUSH TO TALK"
+            android:textColor="#000000"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:backgroundTint="#FFEB3B" />
+
+        <!-- High-Contrast Status Display for Parsed Ledger Transactions -->
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#00FF00"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</RelativeLayout>

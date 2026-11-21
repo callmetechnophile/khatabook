@@ -27,7 +27,7 @@ import java.util.concurrent.Executors
 class AppOrchestrator(context: Context) {
 
     companion object {
-        private const val TAG = "AppOrchestrator"
+        private const val TAG = "KHATAWAS_AUDIO"
     }
 
     // Components
@@ -71,40 +71,33 @@ class AppOrchestrator(context: Context) {
      */
     private fun processTransactionInternal(text: String) {
         // [STEP: PARSING]
-        Log.d(TAG, "[PARSER] Starting deterministic parse for utterance: \"$text\"")
         val transaction = LedgerParser.parseUtterance(text)
+        Log.i(TAG, "Parser result: $transaction")
 
         if (transaction == null) {
-            Log.w(TAG, "[PARSER] Failed to resolve transaction from utterance: \"$text\"")
+            Log.w(TAG, "Failed to resolve transaction from utterance: \"$text\"")
             return
         }
 
-        Log.i(
-            TAG,
-            "[PARSER] Successfully parsed transaction -> Name: ${transaction.name}, " +
-                "Amount: ${transaction.amount}, Type: ${transaction.type}, DateOffset: ${transaction.dateOffset}"
-        )
-
         // [STEP: DB INSERT]
         dbExecutor.execute {
-            Log.d(TAG, "[DATABASE] Submitting transaction insert on background DB thread...")
             try {
                 val rowId = ledgerDatabase.insertTransaction(transaction)
 
                 if (rowId > 0L) {
-                    Log.i(TAG, "[DATABASE] Transaction successfully inserted. Row ID: $rowId")
+                    Log.i(TAG, "DB insert OK, id = $rowId")
 
                     // [STEP: TTS TRIGGER & UI UPDATE]
                     mainHandler.post {
-                        Log.d(TAG, "[TTS] Posting confirmation to main thread for customer: ${transaction.name}")
+                        Log.i(TAG, "TTS triggered")
                         voiceFeedback.speakConfirmation(transaction)
                         onTransactionSaved?.invoke(transaction)
                     }
                 } else {
-                    Log.e(TAG, "[DATABASE] Insert failed. Database returned row ID: $rowId")
+                    Log.e(TAG, "DB insert failed. Returned row ID: $rowId")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "[DATABASE] Database insert error: ${e.message}", e)
+                Log.e(TAG, "DB insert exception: ${e.message}", e)
             }
         }
     }
