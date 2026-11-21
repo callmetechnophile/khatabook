@@ -12,6 +12,7 @@ if (localPropertiesFile.exists()) {
 android {
     namespace 'com.khatawas'
     compileSdk 34
+    ndkVersion '27.1.12297006'
 
     defaultConfig {
         applicationId "com.khatawas"
@@ -33,9 +34,15 @@ android {
             }
         }
 
-        // Pull API key from local.properties without committing secrets to source control
+        // Pull API key and WebSocket URLs from local.properties or defaults
         String apiKey = properties.getProperty("GNANI_API_KEY") ?: project.findProperty("GNANI_API_KEY") ?: ""
         buildConfigField "String", "GNANI_API_KEY", "\"${apiKey}\""
+
+        String sttUrl = properties.getProperty("GNANI_STT_WS_URL") ?: project.findProperty("GNANI_STT_WS_URL") ?: "wss://asr.gnani.ai/stt/v3/stream"
+        buildConfigField "String", "GNANI_STT_WS_URL", "\"${sttUrl}\""
+
+        String ttsUrl = properties.getProperty("GNANI_TTS_WS_URL") ?: project.findProperty("GNANI_TTS_WS_URL") ?: "wss://asr.gnani.ai/api/v1/tts"
+        buildConfigField "String", "GNANI_TTS_WS_URL", "\"${ttsUrl}\""
     }
 
     buildFeatures {

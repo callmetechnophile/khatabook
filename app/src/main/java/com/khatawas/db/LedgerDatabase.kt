@@ -9,15 +9,15 @@ package com.khatawas.db
 import android.content.ContentValues
 import android.content.Context
 import com.khatawas.logic.Transaction
-import net.zetetic.database.sqlcipher.SQLiteDatabase
-import net.zetetic.database.sqlcipher.SQLiteOpenHelper
+import net.sqlcipher.database.SQLiteDatabase
+import net.sqlcipher.database.SQLiteOpenHelper
 
 /**
  * Encrypted ledger database using SQLCipher.
  * Stores Kirana customer records and ledger transactions with AES-256 encryption.
  * Does not transmit data to external cloud services.
  */
-class LedgerDatabase(context: Context) : SQLiteOpenHelper(
+class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
     context,
     DATABASE_NAME,
     null,
@@ -27,10 +27,6 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(
     companion object {
         const val DATABASE_NAME = "khatawas.db"
         const val DATABASE_VERSION = 1
-
-        // Security: Placeholder constant for the database password.
-        // In production, this key is derived dynamically from Android Keystore on first launch.
-        private const val KEYSTORE_DERIVED_KEY = "KEYSTORE_DERIVED_KEY_PLACEHOLDER"
 
         private const val TABLE_CUSTOMERS = "customers"
         private const val TABLE_TRANSACTIONS = "transactions"
@@ -44,25 +40,27 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(
         private const val COLUMN_TIMESTAMP = "timestamp"
 
         private const val MILLIS_PER_DAY = 86_400_000L
+    }
 
-        init {
-            // Load SQLCipher native binaries
-            System.loadLibrary("sqlcipher")
-        }
+    init {
+        // Load SQLCipher native binaries
+        SQLiteDatabase.loadLibs(context)
     }
 
     /**
      * Get the writable database using the Keystore-derived encryption password.
      */
     fun getWritableEncryptedDatabase(): SQLiteDatabase {
-        return getWritableDatabase(KEYSTORE_DERIVED_KEY)
+        val passphrase = DatabaseKeyManager.getOrCreatePassphrase(context)
+        return getWritableDatabase(passphrase)
     }
 
     /**
      * Get the readable database using the Keystore-derived encryption password.
      */
     fun getReadableEncryptedDatabase(): SQLiteDatabase {
-        return getReadableDatabase(KEYSTORE_DERIVED_KEY)
+        val passphrase = DatabaseKeyManager.getOrCreatePassphrase(context)
+        return getReadableDatabase(passphrase)
     }
 
     override fun onCreate(db: SQLiteDatabase) {

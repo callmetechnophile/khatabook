@@ -17,7 +17,7 @@ set(RNNOISE_SOURCES
     ${RNNOISE_DIR}/src/nnet_default.c
     ${RNNOISE_DIR}/src/parse_lpcnet_weights.c
     ${RNNOISE_DIR}/src/rnnoise_tables.c
-    ${RNNOISE_DIR}/src/rnnoise_data.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/rnnoise_data.c
 )
 
 # Create static library for RNNoise
@@ -27,6 +27,7 @@ add_library(rnnoise_static STATIC ${RNNOISE_SOURCES})
 target_include_directories(rnnoise_static PUBLIC
     ${RNNOISE_DIR}/include
     ${RNNOISE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_compile_definitions(rnnoise_static PRIVATE -DRNNOISE_BUILD)

@@ -11,6 +11,7 @@ import com.khatawas.BuildConfig
 import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
 import java.net.URI
+import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -28,19 +29,19 @@ interface SttListener {
  * Operates exclusively on background threads to prevent UI and audio loop contention.
  */
 class GnaniSttClient(
-    endpointUri: URI = URI(DEFAULT_ENDPOINT),
+    endpointUri: URI = URI(BuildConfig.GNANI_STT_WS_URL),
     headers: Map<String, String> = createAuthHeaders()
 ) : WebSocketClient(endpointUri, headers) {
 
     companion object {
         private const val TAG = "KHATAWAS_AUDIO"
-        const val DEFAULT_ENDPOINT = "wss://asr.gnani.ai/v1/streaming"
 
         private fun createAuthHeaders(): Map<String, String> {
             val headers = HashMap<String, String>()
             val apiKey = BuildConfig.GNANI_API_KEY
             if (apiKey.isNotEmpty()) {
                 headers["Authorization"] = "Bearer $apiKey"
+                headers["X-API-Key-ID"] = apiKey
                 headers["token"] = apiKey
             }
             return headers
@@ -74,13 +75,15 @@ class GnaniSttClient(
 
     override fun onOpen(handshakedata: ServerHandshake?) {
         Log.i(TAG, "Gnani STT WebSocket opened")
-        val key = BuildConfig.GNANI_API_KEY
-        if (key.isNotEmpty()) {
-            try {
-                send("""{"token":"$key","format":"pcm16","rate":16000}""")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to send auth frame: ${e.message}", e)
-            }
+        val apiKey = BuildConfig.GNANI_API_KEY
+        
+        // Initial payload specifying audio format: 16kHz, 16-bit PCM, Mono, target language hi-IN
+        val initPayload = """{"token":"$apiKey","format":"pcm16","rate":16000,"encoding":"pcm","sample_rate":16000,"channels":1,"language":"hi-IN","lang":"hi-IN"}"""
+        try {
+            send(initPayload)
+            Log.i(TAG, "Gnani STT configuration frame sent (16kHz PCM Mono, hi-IN)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send initial config frame: ${e.message}", e)
         }
     }
 
@@ -90,6 +93,11 @@ class GnaniSttClient(
         if (transcript.isNotEmpty()) {
             listener?.onTranscriptionReceived(transcript)
         }
+    }
+
+    override fun onMessage(bytes: ByteBuffer?) {
+        // Gnani streaming server may return binary responses if configured
+        Log.d(TAG, "Binary STT frame received: ${bytes?.remaining()} bytes")
     }
 
     override fun onClose(code: Int, reason: String?, remote: Boolean) {
