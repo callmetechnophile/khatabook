@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand & Surface Colors (Light) -->
+    <color name="bg_screen">#F5F7FB</color>
+    <color name="bg_panel">#FFFFFF</color>
+    <color name="border_panel">#E2E8F0</color>
+    <color name="text_primary">#14213D</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="text_muted">#94A3B8</color>
+
+    <!-- Category CREDIT (Green) -->
+    <color name="badge_credit_bg">#E8F5E9</color>
+    <color name="badge_credit_text">#1B5E20</color>
+    <color name="badge_credit_border">#81C784</color>
+
+    <!-- Category DEBIT (Red) -->
+    <color name="badge_debit_bg">#FFEBEE</color>
+    <color name="badge_debit_text">#B71C1C</color>
+    <color name="badge_debit_border">#E57373</color>
+
+    <!-- Category STUCK (Yellow/Amber) -->
+    <color name="badge_stuck_bg">#FFF8E1</color>
+    <color name="badge_stuck_text">#8D5B00</color>
+    <color name="badge_stuck_border">#FFD54F</color>
+
+    <!-- Category ILLEGAL (Grey) -->
+    <color name="badge_illegal_bg">#ECEFF1</color>
+    <color name="badge_illegal_text">#263238</color>
+    <color name="badge_illegal_border">#90A4AE</color>
+</resources>

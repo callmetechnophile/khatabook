@@ -14,7 +14,9 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.MotionEvent
+import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -22,6 +24,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.khatawas.audio.AudioPipeline
 import com.khatawas.audio.GnaniSttClient
@@ -29,6 +33,11 @@ import com.khatawas.audio.SttListener
 import com.khatawas.audio.SttState
 import com.khatawas.core.AppOrchestrator
 import com.khatawas.sync.SyncManager
+import com.khatawas.ui.IndianCurrencyFormatter
+import com.khatawas.ui.TransactionAdapter
+import com.khatawas.ui.TransactionCategory
+import com.khatawas.ui.TransactionUiModel
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
 
@@ -61,6 +70,19 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnAiDisclosure: Button
     private lateinit var btnPurgeData: Button
 
+    // Customer Ledger and Transaction History Views
+    private lateinit var tvLedgerHeader: TextView
+    private lateinit var btnFilterReset: Button
+    private lateinit var tvLedgerCustomerName: TextView
+    private lateinit var tvLedgerBalance: TextView
+    private lateinit var tvLedgerBalanceSubtitle: TextView
+    private lateinit var llEmptyState: LinearLayout
+    private lateinit var rvTransactions: RecyclerView
+    private lateinit var transactionAdapter: TransactionAdapter
+
+    private val bgExecutor = Executors.newSingleThreadExecutor()
+    private var currentFilteredCustomer: String? = null
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,6 +98,26 @@ class MainActivity : AppCompatActivity() {
         switchRnnoise = findViewById(R.id.switch_rnnoise)
         btnAiDisclosure = findViewById(R.id.btn_ai_disclosure)
         btnPurgeData = findViewById(R.id.btn_purge_data)
+
+        // Customer Ledger & Transaction History UI initialization
+        tvLedgerHeader = findViewById(R.id.tv_ledger_header)
+        btnFilterReset = findViewById(R.id.btn_filter_reset)
+        tvLedgerCustomerName = findViewById(R.id.tv_ledger_customer_name)
+        tvLedgerBalance = findViewById(R.id.tv_ledger_balance)
+        tvLedgerBalanceSubtitle = findViewById(R.id.tv_ledger_balance_subtitle)
+        llEmptyState = findViewById(R.id.ll_empty_state)
+        rvTransactions = findViewById(R.id.rv_transactions)
+
+        transactionAdapter = TransactionAdapter { item ->
+            // Filter by clicked customer
+            refreshLedgerAndTransactions(item.customerName)
+        }
+        rvTransactions.layoutManager = LinearLayoutManager(this)
+        rvTransactions.adapter = transactionAdapter
+
+        btnFilterReset.setOnClickListener {
+            refreshLedgerAndTransactions(null)
+        }
 
         // Phase 5 Runtime JNI Verification for Milestone 2
         runMilestone2Verification()
@@ -103,24 +145,27 @@ class MainActivity : AppCompatActivity() {
 
         appOrchestrator.onTransactionSaved = { transaction ->
             val direction = if (transaction.type == "CREDIT") "Credit added" else if (transaction.type == "PAYMENT") "Payment received" else "Reversal processed"
-            tvResult.text = "${transaction.name}  ·  ₹${transaction.amountRupees}"
+            tvResult.text = "${transaction.name}  ·  ${IndianCurrencyFormatter.formatPaise(transaction.amountPaise)}"
             tvResultDetail.text = "$direction  •  Date offset: ${transaction.dateOffset} day(s)"
             tvStatus.text = "Saved to your local encrypted ledger."
             syncManager.triggerImmediateSync()
+            refreshLedgerAndTransactions(currentFilteredCustomer)
         }
 
         appOrchestrator.onBatchTransactionsSaved = { transactions, netBalancePaise ->
             val count = transactions.size
             tvResult.text = "${transactions.first().name}  ·  $count entries"
-            tvResultDetail.text = "Net outstanding balance: ₹${netBalancePaise / 100.0}"
+            tvResultDetail.text = "Net outstanding balance: ${IndianCurrencyFormatter.formatPaise(netBalancePaise)}"
             tvStatus.text = "Multiple transactions saved to local ledger."
             syncManager.triggerImmediateSync()
+            refreshLedgerAndTransactions(currentFilteredCustomer)
         }
 
         appOrchestrator.onQueryResult = { customer, balancePaise ->
             tvResult.text = "$customer  ·  Balance"
-            tvResultDetail.text = "Net outstanding: ₹${balancePaise / 100.0}"
+            tvResultDetail.text = "Net outstanding: ${IndianCurrencyFormatter.formatPaise(balancePaise)}"
             tvStatus.text = "Ledger query result."
+            refreshLedgerAndTransactions(customer)
         }
 
         appOrchestrator.onTransactionRejected = { reason ->
@@ -143,6 +188,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         checkFirstLaunchDisclosure()
+        refreshLedgerAndTransactions(null)
 
         val hasPermission = ContextCompat.checkSelfPermission(
             this,
@@ -226,6 +272,7 @@ class MainActivity : AppCompatActivity() {
                     tvStatus.text = "Local database purged successfully."
                     tvTranscript.text = "Nothing recognized yet."
                     syncManager.triggerImmediateSync()
+                    refreshLedgerAndTransactions(null)
                     Toast.makeText(this, "Data purged successfully", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this, "Failed to purge data", Toast.LENGTH_SHORT).show()
@@ -455,12 +502,78 @@ class MainActivity : AppCompatActivity() {
         Log.i("KHATAWAS_M5_VERIFICATION", "=== END MILESTONE 5 AUDIO DENOISING RUNTIME VERIFICATION ===")
     }
 
+    /**
+     * Refresh the customer ledger and recent transaction list asynchronously from local encrypted SQLite.
+     * When filterCustomer is provided, displays that specific customer's transactions and balance.
+     */
+    fun refreshLedgerAndTransactions(filterCustomer: String? = null) {
+        currentFilteredCustomer = filterCustomer
+        bgExecutor.execute {
+            try {
+                val db = appOrchestrator.ledgerDatabase
+                val entities = if (filterCustomer.isNullOrBlank()) {
+                    db.getRecentTransactions(100)
+                } else {
+                    db.getTransactionsForCustomer(filterCustomer, 100)
+                }
+
+                val balancePaise = if (filterCustomer.isNullOrBlank()) {
+                    val topDebtors = db.getTopDebtors(100)
+                    topDebtors.sumOf { it.second }
+                } else {
+                    db.getCustomerBalancePaise(filterCustomer)
+                }
+
+                val uiModels = entities.map { entity ->
+                    TransactionUiModel(
+                        id = entity.id,
+                        eventId = entity.eventId,
+                        customerName = entity.customerName,
+                        amountPaise = entity.amountPaise,
+                        category = TransactionCategory.fromRecord(entity.type, entity.note),
+                        timestamp = entity.timestamp,
+                        note = entity.note,
+                        paymentMethod = if (entity.note.contains("UPI", ignoreCase = true)) "UPI / Bank" else "Cash / Khata",
+                        reviewStatus = "Recorded"
+                    )
+                }
+
+                runOnUiThread {
+                    if (filterCustomer.isNullOrBlank()) {
+                        tvLedgerCustomerName.text = "All Customers"
+                        tvLedgerBalance.text = IndianCurrencyFormatter.formatPaise(balancePaise)
+                        tvLedgerBalanceSubtitle.text = "Authoritative outstanding balance across all customers."
+                        btnFilterReset.visibility = View.GONE
+                    } else {
+                        tvLedgerCustomerName.text = filterCustomer
+                        tvLedgerBalance.text = IndianCurrencyFormatter.formatPaise(balancePaise)
+                        tvLedgerBalanceSubtitle.text = "Net outstanding udhaar balance for $filterCustomer."
+                        btnFilterReset.visibility = View.VISIBLE
+                    }
+
+                    transactionAdapter.submitList(uiModels)
+
+                    if (uiModels.isEmpty()) {
+                        llEmptyState.visibility = View.VISIBLE
+                        rvTransactions.visibility = View.GONE
+                    } else {
+                        llEmptyState.visibility = View.GONE
+                        rvTransactions.visibility = View.VISIBLE
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error refreshing ledger transactions: ${e.message}", e)
+            }
+        }
+    }
+
     override fun onDestroy() {
         sessionActive = false
         audioPipeline.stop()
         cleanupClient()
         syncManager.shutdown()
         appOrchestrator.destroy()
+        bgExecutor.shutdown()
         super.onDestroy()
     }
 }

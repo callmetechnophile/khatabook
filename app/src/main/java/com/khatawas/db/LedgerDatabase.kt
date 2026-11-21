@@ -29,6 +29,20 @@ data class SyncQueueItem(
 )
 
 /**
+ * Read-only transaction record for UI display.
+ */
+data class TransactionEntity(
+    val id: Long,
+    val eventId: String,
+    val customerName: String,
+    val amountPaise: Long,
+    val type: String,
+    val timestamp: Long,
+    val note: String = "",
+    val reversalTargetId: Long? = null
+)
+
+/**
  * Encrypted ledger database using SQLCipher.
  * Stores Kirana customer records, ledger transactions with AES-256 encryption,
  * and maintains an offline-first synchronization queue.
@@ -616,6 +630,79 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
             arrayOf(System.currentTimeMillis().toString(), errorMessage, eventId)
         )
         return true
+    }
+
+    /**
+     * Retrieve recent transactions across all customers for UI history display.
+     */
+    fun getRecentTransactions(limit: Int = 100): List<TransactionEntity> {
+        val db = getReadableEncryptedDatabase()
+        val query = """
+            SELECT 
+                t.$COLUMN_ID, t.$COLUMN_EVENT_ID, c.$COLUMN_NAME, t.$COLUMN_AMOUNT_PAISE, 
+                t.$COLUMN_TYPE, t.$COLUMN_TIMESTAMP, t.$COLUMN_NOTE, t.$COLUMN_REVERSAL_TARGET_ID
+            FROM $TABLE_TRANSACTIONS t
+            INNER JOIN $TABLE_CUSTOMERS c ON t.$COLUMN_CUSTOMER_ID = c.$COLUMN_ID
+            ORDER BY t.$COLUMN_TIMESTAMP DESC, t.$COLUMN_ID DESC
+            LIMIT ?
+        """.trimIndent()
+
+        val list = ArrayList<TransactionEntity>()
+        val cursor = db.rawQuery(query, arrayOf(limit.toString()))
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    TransactionEntity(
+                        id = it.getLong(0),
+                        eventId = it.getString(1) ?: "",
+                        customerName = it.getString(2) ?: "",
+                        amountPaise = it.getLong(3),
+                        type = it.getString(4) ?: "CREDIT",
+                        timestamp = it.getLong(5),
+                        note = it.getString(6) ?: "",
+                        reversalTargetId = if (it.isNull(7)) null else it.getLong(7)
+                    )
+                )
+            }
+        }
+        return list
+    }
+
+    /**
+     * Retrieve transaction history for a specific customer.
+     */
+    fun getTransactionsForCustomer(customerName: String, limit: Int = 100): List<TransactionEntity> {
+        val db = getReadableEncryptedDatabase()
+        val query = """
+            SELECT 
+                t.$COLUMN_ID, t.$COLUMN_EVENT_ID, c.$COLUMN_NAME, t.$COLUMN_AMOUNT_PAISE, 
+                t.$COLUMN_TYPE, t.$COLUMN_TIMESTAMP, t.$COLUMN_NOTE, t.$COLUMN_REVERSAL_TARGET_ID
+            FROM $TABLE_TRANSACTIONS t
+            INNER JOIN $TABLE_CUSTOMERS c ON t.$COLUMN_CUSTOMER_ID = c.$COLUMN_ID
+            WHERE c.$COLUMN_NAME = ? COLLATE NOCASE
+            ORDER BY t.$COLUMN_TIMESTAMP DESC, t.$COLUMN_ID DESC
+            LIMIT ?
+        """.trimIndent()
+
+        val list = ArrayList<TransactionEntity>()
+        val cursor = db.rawQuery(query, arrayOf(customerName.trim(), limit.toString()))
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    TransactionEntity(
+                        id = it.getLong(0),
+                        eventId = it.getString(1) ?: "",
+                        customerName = it.getString(2) ?: "",
+                        amountPaise = it.getLong(3),
+                        type = it.getString(4) ?: "CREDIT",
+                        timestamp = it.getLong(5),
+                        note = it.getString(6) ?: "",
+                        reversalTargetId = if (it.isNull(7)) null else it.getLong(7)
+                    )
+                )
+            }
+        }
+        return list
     }
 
     /**
