@@ -1,0 +1,142 @@
+[
+  {
+    "utterance": "रमेश का 340 उधार",
+    "script": "devanagari",
+    "language": "hi",
+    "intent": "TRANSACTION",
+    "direction": "CREDIT",
+    "customer": "रमेश",
+    "amount_paise": 34000,
+    "date_offset": 0
+  },
+  {
+    "utterance": "Ramesh ka 340 udhaar",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "TRANSACTION",
+    "direction": "CREDIT",
+    "customer": "Ramesh",
+    "amount_paise": 34000,
+    "date_offset": 0
+  },
+  {
+    "utterance": "सुरेश ने 200 दिया",
+    "script": "devanagari",
+    "language": "hi",
+    "intent": "TRANSACTION",
+    "direction": "PAYMENT",
+    "customer": "सुरेश",
+    "amount_paise": 20000,
+    "date_offset": 0
+  },
+  {
+    "utterance": "Suresh ne 200 diya",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "TRANSACTION",
+    "direction": "PAYMENT",
+    "customer": "Suresh",
+    "amount_paise": 20000,
+    "date_offset": 0
+  },
+  {
+    "utterance": "Ramesh ka 340 udhaar, kal 200 diya tha",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "TRANSACTION",
+    "direction": "COMPOUND",
+    "customer": "Ramesh",
+    "clauses": [
+      {"direction": "CREDIT", "amount_paise": 34000, "date_offset": 0},
+      {"direction": "PAYMENT", "amount_paise": 20000, "date_offset": -1}
+    ]
+  },
+  {
+    "utterance": "Ramesh ko 500 jama kiya",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "TRANSACTION",
+    "direction": "PAYMENT",
+    "customer": "Ramesh",
+    "amount_paise": 50000,
+    "date_offset": 0
+  },
+  {
+    "utterance": "Nahi, 430",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "CORRECTION",
+    "amount_paise": 43000
+  },
+  {
+    "utterance": "नहीं, 430",
+    "script": "devanagari",
+    "language": "hi",
+    "intent": "CORRECTION",
+    "amount_paise": 43000
+  },
+  {
+    "utterance": "Ramesh ka total kitna hai?",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "QUERY",
+    "customer": "Ramesh",
+    "query_type": "BALANCE"
+  },
+  {
+    "utterance": "रमेश का हिसाब बताओ",
+    "script": "devanagari",
+    "language": "hi",
+    "intent": "QUERY",
+    "customer": "रमेश",
+    "query_type": "BALANCE"
+  },
+  {
+    "utterance": "Aaj kitna udhaar gaya?",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "QUERY",
+    "query_type": "DAILY_CREDIT"
+  },
+  {
+    "utterance": "Sabse zyada udhaar kiske paas hai?",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "QUERY",
+    "query_type": "TOP_DEBTORS"
+  },
+  {
+    "utterance": "इसका 340 उधार",
+    "script": "devanagari",
+    "language": "hi",
+    "intent": "AMBIGUOUS_PRONOUN",
+    "pronoun": "इसका",
+    "should_reject": true
+  },
+  {
+    "utterance": "Iska 340 udhaar",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "AMBIGUOUS_PRONOUN",
+    "pronoun": "Iska",
+    "should_reject": true
+  },
+  {
+    "utterance": "Uska 200 jama",
+    "script": "latin",
+    "language": "hi-en",
+    "intent": "AMBIGUOUS_PRONOUN",
+    "pronoun": "Uska",
+    "should_reject": true
+  },
+  {
+    "utterance": "Suresh ge 500 kotte",
+    "script": "latin",
+    "language": "kn-en",
+    "intent": "TRANSACTION",
+    "direction": "PAYMENT",
+    "customer": "Suresh",
+    "amount_paise": 50000,
+    "date_offset": 0
+  }
+]

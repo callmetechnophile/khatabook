@@ -182,4 +182,39 @@ class LedgerParserTest {
         assertTrue(rWeek is ParseResult.Success)
         assertEquals(-7, (rWeek as ParseResult.Success).transactions[0].dateOffset)
     }
+
+    @Test
+    fun testReversalDetection() {
+        val input = "Ramesh ka hisaab cancel karo"
+        val result = LedgerParser.parseStructured(input)
+
+        assertTrue("Should detect reversal", result is ParseResult.Reversal)
+        val rev = result as ParseResult.Reversal
+        assertEquals("Ramesh", rev.customerName)
+    }
+
+    @Test
+    fun testTopDebtorsQueryDetection() {
+        val input = "Sabse zyada udhaar kiske paas hai?"
+        val result = LedgerParser.parseStructured(input)
+
+        assertTrue("Should detect top debtors query", result is ParseResult.TopDebtorsQuery)
+    }
+
+    @Test
+    fun testDailyCreditAndPaymentQueryDetection() {
+        val inputCredit = "Aaj kitna udhaar gaya?"
+        val resCredit = LedgerParser.parseStructured(inputCredit)
+        assertTrue("Should detect daily credit query", resCredit is ParseResult.DailySummaryQuery)
+        val qCredit = resCredit as ParseResult.DailySummaryQuery
+        assertEquals(0, qCredit.dateOffset)
+        assertEquals("CREDIT", qCredit.queryType)
+
+        val inputPayment = "Kal ka collection kitna tha?"
+        val resPayment = LedgerParser.parseStructured(inputPayment)
+        assertTrue("Should detect daily payment collection query", resPayment is ParseResult.DailySummaryQuery)
+        val qPayment = resPayment as ParseResult.DailySummaryQuery
+        assertEquals(-1, qPayment.dateOffset)
+        assertEquals("PAYMENT", qPayment.queryType)
+    }
 }

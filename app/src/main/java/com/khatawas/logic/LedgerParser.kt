@@ -13,8 +13,9 @@ import java.util.Locale
  * Direction of a ledger entry.
  */
 enum class TransactionDirection {
-    CREDIT,  // Goods given on credit (udhaar / baaki)
-    PAYMENT  // Money received from customer (jama / diya)
+    CREDIT,   // Goods given on credit (udhaar / baaki)
+    PAYMENT,  // Money received from customer (jama / diya)
+    REVERSAL  // Reversal of an existing entry (cancel / wapas)
 }
 
 /**
@@ -24,8 +25,10 @@ enum class TransactionDirection {
 data class Transaction(
     val name: String,
     val amountPaise: Long,
-    val type: String, // "CREDIT" or "PAYMENT"
-    val dateOffset: Int = 0
+    val type: String, // "CREDIT", "PAYMENT", or "REVERSAL"
+    val dateOffset: Int = 0,
+    val eventId: String = java.util.UUID.randomUUID().toString(),
+    val note: String = ""
 ) {
     val amount: Int get() = (amountPaise / 100).toInt()
     val amountRupees: Double get() = amountPaise / 100.0
@@ -35,12 +38,15 @@ data class Transaction(
 }
 
 /**
- * Structured parsing result with explicit ambiguity and intent reporting.
+ * Structured parsing result with explicit ambiguity, queries, and reversals.
  */
 sealed class ParseResult {
     data class Success(val transactions: List<Transaction>) : ParseResult()
     data class Correction(val newAmountPaise: Long) : ParseResult()
     data class Query(val customerName: String, val queryType: String) : ParseResult()
+    data class DailySummaryQuery(val dateOffset: Int, val queryType: String) : ParseResult()
+    data class TopDebtorsQuery(val limit: Int = 5) : ParseResult()
+    data class Reversal(val customerName: String, val amountPaise: Long = 0L) : ParseResult()
     data class Ambiguous(val reason: String, val clarificationQuestion: String) : ParseResult()
     data class Failure(val errorMessage: String) : ParseResult()
 }
@@ -117,11 +123,13 @@ object LedgerParser {
         "ka", "ke", "ki", "ko", "ne", "se", "me", "mein", "par", "wala", "wali", "tha", "thi", "the", "hai", "hain",
         "udhaar", "udhar", "jama", "diya", "diye", "baaki", "payment", "paid", "bhi", "aur", "and",
         "nahi", "no", "not", "samaan", "hisaab", "hisab", "kitna", "batao", "saala",
+        "gaya", "gayi", "gaye", "hua", "hui", "hue", "karo", "karna", "liya", "liye", "collection", "total", "sabse", "zyada", "kiske", "paas",
         // Devanagari
         "आज", "कल", "परसों", "परसो", "रुपये", "रुपए", "रुपया",
         "का", "के", "की", "को", "ने", "से", "में", "पर", "वाला", "वाली", "था", "थी", "थे", "है", "हैं",
         "उधार", "जमा", "दिया", "दिए", "बाकी", "पेमेंट", "भी", "और",
-        "नहीं", "ना", "सामान", "हिसाब", "कितना", "बताओ", "कुल"
+        "नहीं", "ना", "सामान", "हिसाब", "कितना", "बताओ", "कुल",
+        "गया", "गयी", "गए", "हुआ", "हुई", "हुए", "करो", "करना", "लिया", "लिए", "कलेक्शन", "टोटल", "सबसे", "ज्यादा", "किसके", "पास"
     )
 
     // Hindi & English number words in Latin and Devanagari
@@ -218,7 +226,19 @@ object LedgerParser {
 
         val lower = trimmed.lowercase(Locale.ROOT)
 
-        // 1. Correction detection: "Nahi, 430" / "नहीं, 430"
+        // 1. Reversal detection: "Ramesh ka hisaab cancel karo", "रमेश का उधार रद्द करो", "wapas karo"
+        if (lower.contains("cancel") || lower.contains("radd") || lower.contains("wapas") || lower.contains("hatao") ||
+            trimmed.contains("रद्द") || trimmed.contains("वापस") || trimmed.contains("हटाओ") || trimmed.contains("कैंसिल")
+        ) {
+            val customer = extractCustomerName(trimmed)
+            if (customer != null) {
+                val amount = extractAmountPaise(trimmed) ?: 0L
+                return ParseResult.Reversal(customer, amount)
+            }
+            return ParseResult.Ambiguous("Reversal without customer name", "Kiska hisaab cancel karna hai?")
+        }
+
+        // 2. Correction detection: "Nahi, 430" / "नहीं, 430"
         if (lower.startsWith("nahi") || lower.startsWith("no ") || lower.startsWith("galat") ||
             trimmed.startsWith("नहीं") || trimmed.startsWith("गलत")
         ) {
@@ -229,9 +249,28 @@ object LedgerParser {
             return ParseResult.Ambiguous("Correction without valid amount", "Kitna amount likhna hai?")
         }
 
-        // 2. Query detection: "Ramesh ka hisaab batao" / "रमेश का हिसाब बताओ"
-        if (lower.contains("kitna") || lower.contains("hisaab") || lower.contains("balance") || lower.contains("batao") ||
-            trimmed.contains("कितना") || trimmed.contains("हिसाब") || trimmed.contains("बताओ")
+        // 3. Top debtors query: "Sabse zyada udhaar kiske paas hai?" / "सबसे ज्यादा उधार किसके पास है"
+        if (lower.contains("sabse zyada") || lower.contains("top udhaar") ||
+            trimmed.contains("सबसे ज्यादा") || trimmed.contains("सबसे अधिक")
+        ) {
+            return ParseResult.TopDebtorsQuery(5)
+        }
+
+        // 4. Daily summary queries: "Aaj kitna udhaar gaya?", "Kal ka collection kitna tha?"
+        if ((lower.contains("kitna") || trimmed.contains("कितना")) &&
+            (lower.contains("aaj") || lower.contains("kal") || trimmed.contains("आज") || trimmed.contains("कल")) &&
+            extractCustomerName(trimmed) == null
+        ) {
+            val dateOffset = extractDateOffset(trimmed)
+            val isCredit = CREDIT_KEYWORDS.any { lower.contains(it) || trimmed.contains(it) }
+            val isPayment = PAYMENT_KEYWORDS.any { lower.contains(it) || trimmed.contains(it) } || lower.contains("collection")
+            val queryType = if (isCredit && !isPayment) "CREDIT" else if (isPayment && !isCredit) "PAYMENT" else "ALL"
+            return ParseResult.DailySummaryQuery(dateOffset, queryType)
+        }
+
+        // 5. Customer balance query: "Ramesh ka hisaab batao" / "रमेश का हिसाब बताओ" / "Ramesh ka total kitna hai"
+        if (lower.contains("kitna") || lower.contains("hisaab") || lower.contains("balance") || lower.contains("batao") || lower.contains("total") ||
+            trimmed.contains("कितना") || trimmed.contains("हिसाब") || trimmed.contains("बताओ") || trimmed.contains("टोटल")
         ) {
             val customer = extractCustomerName(trimmed)
             if (customer != null) {
@@ -320,7 +359,7 @@ object LedgerParser {
      * Prioritizes words preceding postpositions (ka, ke, ki, ko, ne, se, का, के, की, को, ने, से).
      */
     fun extractCustomerName(text: String): String? {
-        val tokens = text.trim().split(Regex("[\\s,;]+"))
+        val tokens = text.trim().split(Regex("[\\s,;?!.]+")).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return null
 
         val particles = setOf("ka", "ke", "ki", "ko", "ne", "se", "का", "के", "की", "को", "ने", "से")

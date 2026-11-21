@@ -153,6 +153,75 @@ class AppOrchestrator(context: Context) {
                 }
             }
 
+            is ParseResult.DailySummaryQuery -> {
+                val offset = parseResult.dateOffset
+                val type = parseResult.queryType
+                val dayLabel = if (offset == 0) "Aaj" else if (offset == -1) "Kal" else "Pichhle din"
+                dbExecutor.execute {
+                    try {
+                        val creditPaise = ledgerDatabase.getDailyCreditPaise(offset)
+                        val paymentPaise = ledgerDatabase.getDailyPaymentPaise(offset)
+                        mainHandler.post {
+                            val msg = when (type) {
+                                "CREDIT" -> "$dayLabel ka kul udhaar ₹${creditPaise / 100} hai"
+                                "PAYMENT" -> "$dayLabel ka kul collection ₹${paymentPaise / 100} hai"
+                                else -> "$dayLabel ka udhaar ₹${creditPaise / 100} aur collection ₹${paymentPaise / 100} hai"
+                            }
+                            voiceFeedback.speak(msg)
+                            onQueryResult?.invoke(dayLabel, if (type == "PAYMENT") paymentPaise else creditPaise)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching daily summary: ${e.message}", e)
+                    }
+                }
+            }
+
+            is ParseResult.TopDebtorsQuery -> {
+                dbExecutor.execute {
+                    try {
+                        val top = ledgerDatabase.getTopDebtors(parseResult.limit)
+                        mainHandler.post {
+                            if (top.isEmpty()) {
+                                val msg = "Abhi kisi ka koi udhaar baaki nahi hai"
+                                voiceFeedback.speak(msg)
+                                onQueryResult?.invoke("Sabhi", 0L)
+                            } else {
+                                val topPerson = top.first()
+                                val msg = "Sabse zyada udhaar ${topPerson.first} ke paas ₹${topPerson.second / 100} hai"
+                                voiceFeedback.speak(msg)
+                                onQueryResult?.invoke(topPerson.first, topPerson.second)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching top debtors: ${e.message}", e)
+                    }
+                }
+            }
+
+            is ParseResult.Reversal -> {
+                val customer = parseResult.customerName
+                val amount = parseResult.amountPaise
+                dbExecutor.execute {
+                    try {
+                        val reversed = ledgerDatabase.reverseTransaction(customer, amount)
+                        mainHandler.post {
+                            if (reversed) {
+                                val msg = "${customer} ka hisaab cancel kar diya gaya hai"
+                                voiceFeedback.speak(msg)
+                                val netBalance = ledgerDatabase.getCustomerBalancePaise(customer)
+                                onTransactionSaved?.invoke(Transaction(customer, 0, "REVERSAL", 0))
+                            } else {
+                                val msg = "Cancel karne ke liye koi hisaab nahi mila"
+                                voiceFeedback.speak(msg)
+                                onTransactionRejected?.invoke(msg)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error reversing transaction: ${e.message}", e)
+                    }
+                }
+            }
+
             is ParseResult.Failure -> {
                 mainHandler.post {
                     onTransactionRejected?.invoke(parseResult.errorMessage)
