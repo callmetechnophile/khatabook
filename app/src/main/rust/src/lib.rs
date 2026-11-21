@@ -88,7 +88,8 @@ pub extern "system" fn Java_com_khatawas_audio_RustDspEngine_nativeProcess(
     if engine.process(&samples, &mut filtered).ok() != Some(FRAME_OUT) { return -5; }
     let mut pcm = [0_u8; FRAME_OUT * 2];
     if encode_pcm16_le(&filtered, &mut pcm).is_err() { return -6; }
-    let signed_bytes: Vec<i8> = pcm.iter().map(|&b| b as i8).collect();
+    let mut signed_bytes = [0_i8; FRAME_OUT * 2];
+    for i in 0..FRAME_OUT * 2 { signed_bytes[i] = pcm[i] as i8; }
     if env.set_byte_array_region(&output, 0, &signed_bytes).is_err() { return -7; }
     FRAME_OUT as jni::sys::jint
 }
