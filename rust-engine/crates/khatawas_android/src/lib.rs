@@ -7,6 +7,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 use std::sync::Mutex;
 
+use khatawas_core::audio::pipeline::AudioPipelineState;
 use khatawas_core::core_add;
 use khatawas_core::core_version;
 use khatawas_core::dsp::fir::FirDecimator3;
@@ -15,6 +16,7 @@ use khatawas_core::ledger::LedgerEngine;
 type JNIEnv = *mut *const JNINativeInterface;
 type JClass = *mut c_void;
 type JString = *mut c_void;
+type JByteArray = *mut c_void;
 type JFloatArray = *mut c_void;
 type JLongArray = *mut c_void;
 
@@ -27,25 +29,33 @@ pub struct JNINativeInterface {
     pub get_string_utf_chars: unsafe extern "system" fn(JNIEnv, JString, *mut u8) -> *const c_char,
     pub release_string_utf_chars: unsafe extern "system" fn(JNIEnv, JString, *const c_char),
     pub get_array_length: unsafe extern "system" fn(JNIEnv, *mut c_void) -> i32,
-    reserved_arrays: [*const c_void; 32], // 172..203
-    pub get_long_array_region: unsafe extern "system" fn(JNIEnv, JLongArray, i32, i32, *mut i64),
-    pub get_float_array_region: unsafe extern "system" fn(JNIEnv, JFloatArray, i32, i32, *mut f32),
+    reserved_arrays: [*const c_void; 28], // 172..199 (NewObject..ReleaseDouble + GetBooleanArrayRegion)
+    pub get_byte_array_region: unsafe extern "system" fn(JNIEnv, JByteArray, i32, i32, *mut i8), // 200
+    reserved_after_byte_region: [*const c_void; 3], // 201..203 (Char, Short, Int)
+    pub get_long_array_region: unsafe extern "system" fn(JNIEnv, JLongArray, i32, i32, *mut i64), // 204
+    pub get_float_array_region: unsafe extern "system" fn(JNIEnv, JFloatArray, i32, i32, *mut f32), // 205
     pub get_double_array_region: *const c_void, // 206
     pub set_boolean_array_region: *const c_void, // 207
-    pub set_byte_array_region: *const c_void, // 208
-    pub set_char_array_region: *const c_void, // 209
-    pub set_short_array_region: *const c_void, // 210
-    pub set_int_array_region: *const c_void, // 211
+    pub set_byte_array_region: unsafe extern "system" fn(JNIEnv, JByteArray, i32, i32, *const i8), // 208
+    reserved_set_after_byte: [*const c_void; 3], // 209..211 (Char, Short, Int)
     pub set_long_array_region: unsafe extern "system" fn(JNIEnv, JLongArray, i32, i32, *const i64), // 212
     pub set_float_array_region: unsafe extern "system" fn(JNIEnv, JFloatArray, i32, i32, *const f32), // 213
+    pub set_double_array_region: *const c_void, // 214
 }
 
 const FIR_HANDLE_MAGIC: u32 = 0x4B485457; // 'KHTW'
+const AUDIO_PIPELINE_MAGIC: u32 = 0x41554450; // 'AUDP'
 
 #[repr(C)]
 struct FirHandle {
     magic: u32,
     decimator: FirDecimator3,
+}
+
+#[repr(C)]
+struct AudioPipelineHandle {
+    magic: u32,
+    pipeline: AudioPipelineState,
 }
 
 static FALLBACK_FIR: Mutex<Option<FirDecimator3>> = Mutex::new(None);
@@ -88,8 +98,6 @@ pub extern "system" fn Java_com_khatawas_rust_RustEngine_nativeHealthCheck(
 // Milestone 3: Lifecycle-safe Stateful FIR Decimator Handle Management
 // ---------------------------------------------------------------------------
 
-/// Initialize an isolated, stateful FIR decimator instance.
-/// Returns an opaque 64-bit handle.
 #[no_mangle]
 pub extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirInit(
     _env: JNIEnv,
@@ -102,8 +110,6 @@ pub extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirInit(
     Box::into_raw(handle) as i64
 }
 
-/// Process a streaming PCM frame through an existing FIR decimator handle.
-/// Zero heap allocations in steady-state operation (uses stack buffer for standard frames).
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirProcessHandle(
     env: JNIEnv,
@@ -161,7 +167,6 @@ pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirProcess
     written as i32
 }
 
-/// Reset filter history and phase without destroying the allocated instance.
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirResetHandle(
     _env: JNIEnv,
@@ -179,7 +184,6 @@ pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirResetHa
     1
 }
 
-/// Destroy and safely deallocate the FIR decimator instance.
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirDestroyHandle(
     _env: JNIEnv,
@@ -191,7 +195,7 @@ pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirDestroy
     }
     let ptr = handle as *mut FirHandle;
     if (*ptr).magic == FIR_HANDLE_MAGIC {
-        (*ptr).magic = 0; // Invalidate magic immediately to guard against double-free
+        (*ptr).magic = 0;
         let _ = Box::from_raw(ptr);
         1
     } else {
@@ -199,7 +203,6 @@ pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirDestroy
     }
 }
 
-/// Legacy single-call FIR process convenience method (backed by lazy static fallback).
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirProcess(
     env: JNIEnv,
@@ -253,7 +256,200 @@ pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeFirProcess
     written as i32
 }
 
-/// JNI natural language speech transcript parsing via Rust LedgerEngine.
+// ---------------------------------------------------------------------------
+// Milestone 4: Stateful Audio Pipeline Core Management (JNI)
+// ---------------------------------------------------------------------------
+
+/// Create and initialize an AudioPipelineState instance.
+/// Returns an opaque 64-bit handle.
+#[no_mangle]
+pub extern "system" fn Java_com_khatawas_rust_RustEngine_nativeAudioPipelineCreate(
+    _env: JNIEnv,
+    _class: JClass,
+) -> i64 {
+    let handle = Box::new(AudioPipelineHandle {
+        magic: AUDIO_PIPELINE_MAGIC,
+        pipeline: AudioPipelineState::new(),
+    });
+    Box::into_raw(handle) as i64
+}
+
+/// Process a complete 480-sample float frame (e.g. from RNNoise) and output 320 bytes PCM16 at 16 kHz.
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeAudioPipelineProcessFloatFrame(
+    env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+    in_floats: JFloatArray,
+    out_pcm16_bytes: JByteArray,
+) -> i32 {
+    if handle == 0 || env.is_null() || in_floats.is_null() || out_pcm16_bytes.is_null() {
+        return 0;
+    }
+
+    let ptr = handle as *mut AudioPipelineHandle;
+    if (*ptr).magic != AUDIO_PIPELINE_MAGIC {
+        return -1;
+    }
+    let handle_ref = &mut *ptr;
+
+    let iface = **env;
+    let in_len = (iface.get_array_length)(env, in_floats);
+    let out_len = (iface.get_array_length)(env, out_pcm16_bytes);
+
+    if in_len != 480 || out_len < 320 {
+        return 0;
+    }
+
+    let mut float_buf = [0.0f32; 480];
+    let mut byte_buf = [0u8; 320];
+
+    (iface.get_float_array_region)(env, in_floats, 0, 480, float_buf.as_mut_ptr());
+
+    let written = handle_ref.pipeline.process_float_frame_to_pcm16(&float_buf, &mut byte_buf);
+
+    if written > 0 {
+        (iface.set_byte_array_region)(
+            env,
+            out_pcm16_bytes,
+            0,
+            written as i32,
+            byte_buf.as_ptr() as *const i8,
+        );
+    }
+
+    written as i32
+}
+
+/// Ingest arbitrary-sized incoming PCM16 byte chunks (from AudioRecord) and output accumulated 16 kHz PCM16 bytes.
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeAudioPipelinePushAndProcessPcm16(
+    env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+    in_pcm16_bytes: JByteArray,
+    out_pcm16_bytes: JByteArray,
+) -> i32 {
+    if handle == 0 || env.is_null() || in_pcm16_bytes.is_null() || out_pcm16_bytes.is_null() {
+        return 0;
+    }
+
+    let ptr = handle as *mut AudioPipelineHandle;
+    if (*ptr).magic != AUDIO_PIPELINE_MAGIC {
+        return -1;
+    }
+    let handle_ref = &mut *ptr;
+
+    let iface = **env;
+    let in_len = (iface.get_array_length)(env, in_pcm16_bytes);
+    let out_len = (iface.get_array_length)(env, out_pcm16_bytes);
+    if in_len <= 0 || out_len <= 0 {
+        return 0;
+    }
+
+    let in_usize = in_len as usize;
+    let out_usize = out_len as usize;
+
+    let mut in_stack = [0u8; 1024];
+    let mut out_stack = [0u8; 1024];
+    let (mut in_heap, mut out_heap);
+
+    let in_slice: &mut [u8] = if in_usize <= in_stack.len() {
+        &mut in_stack[..in_usize]
+    } else {
+        in_heap = vec![0u8; in_usize];
+        &mut in_heap[..]
+    };
+
+    let out_slice: &mut [u8] = if out_usize <= out_stack.len() {
+        &mut out_stack[..out_usize]
+    } else {
+        out_heap = vec![0u8; out_usize];
+        &mut out_heap[..]
+    };
+
+    (iface.get_byte_array_region)(
+        env,
+        in_pcm16_bytes,
+        0,
+        in_len,
+        in_slice.as_mut_ptr() as *mut i8,
+    );
+
+    let written = handle_ref.pipeline.push_and_process_pcm16(in_slice, out_slice);
+
+    if written > 0 {
+        (iface.set_byte_array_region)(
+            env,
+            out_pcm16_bytes,
+            0,
+            written as i32,
+            out_slice.as_ptr() as *const i8,
+        );
+    }
+
+    written as i32
+}
+
+/// Reset pipeline state without destroying instance.
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeAudioPipelineReset(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+) -> u8 {
+    if handle == 0 {
+        return 0;
+    }
+    let ptr = handle as *mut AudioPipelineHandle;
+    if (*ptr).magic != AUDIO_PIPELINE_MAGIC {
+        return 0;
+    }
+    (*ptr).pipeline.reset();
+    1
+}
+
+/// Safely destroy AudioPipeline instance.
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeAudioPipelineDestroy(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+) -> u8 {
+    if handle == 0 {
+        return 0;
+    }
+    let ptr = handle as *mut AudioPipelineHandle;
+    if (*ptr).magic == AUDIO_PIPELINE_MAGIC {
+        (*ptr).magic = 0;
+        let _ = Box::from_raw(ptr);
+        1
+    } else {
+        0
+    }
+}
+
+/// Query count of processed 10ms frames.
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeAudioPipelineGetProcessedFrames(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+) -> i64 {
+    if handle == 0 {
+        return 0;
+    }
+    let ptr = handle as *mut AudioPipelineHandle;
+    if (*ptr).magic != AUDIO_PIPELINE_MAGIC {
+        return 0;
+    }
+    (*ptr).pipeline.processed_frames() as i64
+}
+
+// ---------------------------------------------------------------------------
+// Natural Language & Ledger Engines
+// ---------------------------------------------------------------------------
+
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeParseUtterance(
     env: JNIEnv,
@@ -288,7 +484,6 @@ pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeParseUtter
     (iface.new_string_utf)(env, c_res.as_ptr())
 }
 
-/// JNI net balance calculation in integer paise.
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeCalculateBalance(
     env: JNIEnv,

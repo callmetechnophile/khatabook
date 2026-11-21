@@ -50,6 +50,14 @@ object RustEngine {
     // Legacy / Convenience FIR Process
     external fun nativeFirProcess(input: FloatArray, output: FloatArray): Int
 
+    // Milestone 4: Stateful Audio Pipeline Core Management
+    external fun nativeAudioPipelineCreate(): Long
+    external fun nativeAudioPipelineProcessFloatFrame(handle: Long, inFloats: FloatArray, outPcm16Bytes: ByteArray): Int
+    external fun nativeAudioPipelinePushAndProcessPcm16(handle: Long, inPcm16Bytes: ByteArray, outPcm16Bytes: ByteArray): Int
+    external fun nativeAudioPipelineReset(handle: Long): Boolean
+    external fun nativeAudioPipelineDestroy(handle: Long): Boolean
+    external fun nativeAudioPipelineGetProcessedFrames(handle: Long): Long
+
     external fun nativeParseUtterance(utterance: String): String
     external fun nativeCalculateBalance(credits: LongArray, payments: LongArray, reversals: LongArray): Long
 }

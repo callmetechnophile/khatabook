@@ -165,6 +165,7 @@ class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
         val outFloats = FloatArray(FRAME_SIZE_480)
         val resampledFloats = FloatArray(SAMPLES_16K)
         val resampler = FirDecimatorFactory.create()
+        val rustAudioCore = if (com.khatawas.rust.RustEngine.isNativeLoaded()) RustAudioPipelineCore() else null
 
         try {
             while (isRecording && audioRecord === record) {
@@ -202,22 +203,28 @@ class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
                     System.arraycopy(inFloats, 0, outFloats, 0, FRAME_SIZE_480)
                 }
 
-                // 48 kHz -> 16 kHz decimation with 31-tap FIR low-pass filter (Rust native engine with Kotlin rollback)
-                val outputSamples = resampler.process(outFloats, resampledFloats)
-                if (outputSamples != SAMPLES_16K) {
-                    Log.e(TAG, "Resampler output mismatch: expected $SAMPLES_16K, got $outputSamples")
-                    continue
-                }
-
                 // Obtain reusable buffer from pool to eliminate per-frame allocations
                 val targetBuffer = bufferPool[poolIndex]
                 poolIndex = (poolIndex + 1) % BUFFER_POOL_SIZE
 
-                // Convert float samples to signed 16-bit little-endian bytes with clamping
-                for (i in 0 until SAMPLES_16K) {
-                    val sample = resampledFloats[i].toInt().coerceIn(-32768, 32767)
-                    targetBuffer[i * 2] = (sample and 0xFF).toByte()
-                    targetBuffer[i * 2 + 1] = ((sample shr 8) and 0xFF).toByte()
+                // 48 kHz -> 16 kHz decimation and PCM16 serialization (Rust Audio Core with Kotlin rollback)
+                if (rustAudioCore != null && rustAudioCore.isNativeActive) {
+                    val bytesWritten = rustAudioCore.processFloatFrame(outFloats, targetBuffer)
+                    if (bytesWritten != BYTES_16K) {
+                        Log.e(TAG, "Rust audio pipeline output mismatch: expected $BYTES_16K, got $bytesWritten")
+                        continue
+                    }
+                } else {
+                    val outputSamples = resampler.process(outFloats, resampledFloats)
+                    if (outputSamples != SAMPLES_16K) {
+                        Log.e(TAG, "Resampler output mismatch: expected $SAMPLES_16K, got $outputSamples")
+                        continue
+                    }
+                    for (i in 0 until SAMPLES_16K) {
+                        val sample = resampledFloats[i].toInt().coerceIn(-32768, 32767)
+                        targetBuffer[i * 2] = (sample and 0xFF).toByte()
+                        targetBuffer[i * 2 + 1] = ((sample shr 8) and 0xFF).toByte()
+                    }
                 }
 
                 onPcm16kReady?.invoke(targetBuffer)
@@ -226,6 +233,7 @@ class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
             Log.e(TAG, "Exception in processAudioLoop: ${e.message}", e)
         } finally {
             try {
+                rustAudioCore?.close()
                 resampler.close()
             } catch (_: Exception) {}
         }

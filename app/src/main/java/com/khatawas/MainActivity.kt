@@ -81,6 +81,8 @@ class MainActivity : AppCompatActivity() {
         runMilestone2Verification()
         // Phase 5 Runtime JNI Verification for Milestone 3 (Rust FIR Decimator)
         runMilestone3Verification()
+        // Phase 6 Runtime JNI Verification for Milestone 4 (Rust Audio Pipeline Core)
+        runMilestone4Verification()
 
         appOrchestrator = AppOrchestrator(this)
         audioPipeline = AudioPipeline(appOrchestrator.rnnoiseProcessor)
@@ -402,6 +404,28 @@ class MainActivity : AppCompatActivity() {
             Log.e("KHATAWAS_M3_VERIFICATION", "Milestone 3 runtime verification failed", e)
         }
         Log.i("KHATAWAS_M3_VERIFICATION", "=== END MILESTONE 3 FIR RUNTIME VERIFICATION ===")
+    }
+
+    private fun runMilestone4Verification() {
+        Log.i("KHATAWAS_M4_VERIFICATION", "=== BEGIN MILESTONE 4 AUDIO PIPELINE RUNTIME VERIFICATION ===")
+        try {
+            val audioCore = com.khatawas.audio.RustAudioPipelineCore()
+            Log.i("KHATAWAS_M4_VERIFICATION", "RustAudioPipelineCore initialized, isNativeActive = ${audioCore.isNativeActive}")
+
+            val inFloats = FloatArray(480) { 1000.0f }
+            val outBytes = ByteArray(320)
+            val written = audioCore.processFloatFrame(inFloats, outBytes)
+            val frames = audioCore.getProcessedFrames()
+            Log.i("KHATAWAS_M4_VERIFICATION", "Processed 480 floats -> $written PCM16 bytes, totalFrames = $frames, byte[0]=${outBytes[0]}, byte[319]=${outBytes[319]}")
+
+            audioCore.reset()
+            Log.i("KHATAWAS_M4_VERIFICATION", "AudioPipelineCore reset successful")
+            audioCore.close()
+            Log.i("KHATAWAS_M4_VERIFICATION", "AudioPipelineCore closed cleanly, isNativeActive = ${audioCore.isNativeActive}")
+        } catch (e: Throwable) {
+            Log.e("KHATAWAS_M4_VERIFICATION", "Milestone 4 runtime verification failed", e)
+        }
+        Log.i("KHATAWAS_M4_VERIFICATION", "=== END MILESTONE 4 AUDIO PIPELINE RUNTIME VERIFICATION ===")
     }
 
     override fun onDestroy() {
