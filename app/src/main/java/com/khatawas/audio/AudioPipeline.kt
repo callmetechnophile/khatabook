@@ -1,7 +1,6 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
- * Simplified Technical English (ASD STE-100) compliant.
- * End-to-end 48kHz to 16kHz audio capture, RNNoise processing, and downsampling pipeline.
+ * Audio capture, RNNoise processing, and anti-aliased 48 kHz to 16 kHz conversion.
  */
 
 package com.khatawas.audio
@@ -13,10 +12,10 @@ import android.media.MediaRecorder
 import android.util.Log
 
 /**
- * Audio capture and DSP pipeline.
- * Captures 48kHz 16-bit PCM audio from the device microphone.
- * Applies RNNoise C++ neural network noise suppression in 480-sample chunks (10 ms).
- * Resamples clean 48kHz audio to 16kHz for Gnani speech recognition.
+ * Captures mono PCM16 audio at 48 kHz, applies RNNoise, and converts it to 16 kHz.
+ *
+ * The FIR decimator keeps filter history between 10 ms input frames. Each complete
+ * 480-sample input frame produces exactly 160 output samples.
  */
 class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
 
@@ -24,124 +23,155 @@ class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
         private const val TAG = "KHATAWAS_AUDIO"
         const val SAMPLE_RATE_48K = 48000
         const val FRAME_SIZE_480 = 480
-        const val SAMPLES_16K = 160 // 480 / 3
-        const val BYTES_16K = 320 // 160 * 2 bytes
+        const val SAMPLES_16K = 160
+        const val BYTES_16K = 320
     }
 
-    // Toggle for live A/B comparison demonstrations
     @Volatile
     var isRnnoiseEnabled: Boolean = true
 
     @Volatile
     private var isRecording = false
 
+    @Volatile
     private var audioRecord: AudioRecord? = null
+
+    @Volatile
     private var captureThread: Thread? = null
 
-    // Callback invoked when a 16kHz PCM byte chunk is ready for speech recognition
     var onPcm16kReady: ((ByteArray) -> Unit)? = null
 
-    /**
-     * Start the 48kHz audio capture and processing thread.
-     */
     @SuppressLint("MissingPermission")
+    @Synchronized
     fun start() {
-        if (isRecording) {
+        if (isRecording) return
+
+        val minBufferSize = AudioRecord.getMinBufferSize(
+            SAMPLE_RATE_48K,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+        if (minBufferSize <= 0) {
+            Log.e(TAG, "AudioRecord returned invalid minimum buffer size: $minBufferSize")
             return
         }
 
-        val channelConfig = AudioFormat.CHANNEL_IN_MONO
-        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val minBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE_48K, channelConfig, audioFormat)
-        val bufferSize = maxOf(minBufferSize, FRAME_SIZE_480 * 4)
-
-        try {
-            audioRecord = AudioRecord(
+        val bufferSize = maxOf(minBufferSize, FRAME_SIZE_480 * 4 * 2)
+        val recorder = try {
+            AudioRecord(
                 MediaRecorder.AudioSource.MIC,
                 SAMPLE_RATE_48K,
-                channelConfig,
-                audioFormat,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize
             )
-
-            audioRecord?.startRecording()
-            isRecording = true
-            Log.i(TAG, "AudioRecord started 48kHz")
-
-            // Dedicated real-time audio thread
-            captureThread = Thread({
-                processAudioLoop()
-            }, "KhatawasDsdThread").apply { start() }
-
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start AudioRecord at 48kHz: ${e.message}", e)
+            Log.e(TAG, "Failed to create AudioRecord: ${e.message}", e)
+            return
+        }
+
+        if (recorder.state != AudioRecord.STATE_INITIALIZED) {
+            Log.e(TAG, "AudioRecord initialization failed")
+            recorder.release()
+            return
+        }
+
+        try {
+            recorder.startRecording()
+            if (recorder.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+                throw IllegalStateException("AudioRecord did not enter recording state")
+            }
+            audioRecord = recorder
+            isRecording = true
+            captureThread = Thread({ processAudioLoop(recorder) }, "KhatawasDsdThread").apply {
+                start()
+            }
+            Log.i(TAG, "AudioRecord started at 48 kHz")
+        } catch (e: Exception) {
+            isRecording = false
+            audioRecord = null
+            try {
+                recorder.release()
+            } catch (_: Exception) {
+            }
+            Log.e(TAG, "Failed to start AudioRecord: ${e.message}", e)
         }
     }
 
-    /**
-     * Stop audio capture and release the microphone resource.
-     */
+    @Synchronized
     fun stop() {
         isRecording = false
+        val recorder = audioRecord
+        val thread = captureThread
+
         try {
-            audioRecord?.stop()
-            audioRecord?.release()
+            recorder?.stop()
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "AudioRecord was not recording during stop", e)
+        }
+
+        if (thread != null && thread !== Thread.currentThread()) {
+            try {
+                thread.join(500)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+        }
+
+        try {
+            recorder?.release()
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping AudioRecord: ${e.message}", e)
+            Log.e(TAG, "Error releasing AudioRecord: ${e.message}", e)
         } finally {
             audioRecord = null
             captureThread = null
         }
     }
 
-    /**
-     * Real-time audio processing loop.
-     * Pre-allocates all buffers before entering the loop to ensure zero GC allocations.
-     */
-    private fun processAudioLoop() {
+    private fun processAudioLoop(record: AudioRecord) {
         val rawShorts = ShortArray(FRAME_SIZE_480)
         val inFloats = FloatArray(FRAME_SIZE_480)
         val outFloats = FloatArray(FRAME_SIZE_480)
         val resampledFloats = FloatArray(SAMPLES_16K)
         val pcm16kBytes = ByteArray(BYTES_16K)
+        val resampler = FirDecimator3()
 
-        while (isRecording) {
-            val record = audioRecord ?: break
-            val shortsRead = record.read(rawShorts, 0, FRAME_SIZE_480)
-
-            if (shortsRead < FRAME_SIZE_480) {
+        while (isRecording && audioRecord === record) {
+            val shortsRead = record.read(rawShorts, 0, FRAME_SIZE_480, AudioRecord.READ_BLOCKING)
+            if (shortsRead < 0) {
+                if (isRecording) Log.e(TAG, "AudioRecord read failed: $shortsRead")
+                break
+            }
+            if (shortsRead == 0) continue
+            if (shortsRead != FRAME_SIZE_480) {
+                // Do not process a partial frame. The next read fills a fresh frame.
+                Log.w(TAG, "Partial audio frame received: $shortsRead samples")
                 continue
             }
 
-            // Convert 16-bit PCM shorts to float samples
             for (i in 0 until FRAME_SIZE_480) {
                 inFloats[i] = rawShorts[i].toFloat()
             }
 
-            // Step 1: Process frame through RNNoise if enabled; bypass if disabled
             if (isRnnoiseEnabled) {
-                rnnoiseProcessor.nativeProcessFrame(inFloats, outFloats)
-                Log.i(TAG, "RNNoise frame processed, VAD prob = 1.0")
+                rnnoiseProcessor.processFrame(inFloats, outFloats)
             } else {
                 System.arraycopy(inFloats, 0, outFloats, 0, FRAME_SIZE_480)
             }
 
-            // Step 2: Downsample 48kHz to 16kHz (drop 2 of every 3 samples)
-            // TODO: Replace with SpeexDSP C library for anti-aliasing quality.
-            for (i in 0 until SAMPLES_16K) {
-                resampledFloats[i] = outFloats[i * 3]
+            val outputSamples = resampler.process(outFloats, resampledFloats)
+            if (outputSamples != SAMPLES_16K) {
+                Log.e(TAG, "Unexpected resampler output count: $outputSamples")
+                continue
             }
 
-            // Step 3: Convert 16kHz float samples to 16-bit little-endian PCM bytes
             for (i in 0 until SAMPLES_16K) {
-                val clamped = resampledFloats[i].toInt().coerceIn(-32768, 32767)
-                pcm16kBytes[i * 2] = (clamped and 0xFF).toByte()
-                pcm16kBytes[i * 2 + 1] = ((clamped shr 8) and 0xFF).toByte()
+                val sample = resampledFloats[i].toInt().coerceIn(-32768, 32767)
+                pcm16kBytes[i * 2] = (sample and 0xFF).toByte()
+                pcm16kBytes[i * 2 + 1] = ((sample shr 8) and 0xFF).toByte()
             }
 
-            Log.i(TAG, "Resampled to 16kHz, bytes = ${pcm16kBytes.size}")
-
-            // Step 4: Dispatch clean 16kHz PCM chunk to listener
+            // The callback receives its own array because the capture buffer is reused.
             onPcm16kReady?.invoke(pcm16kBytes.clone())
         }
     }
