@@ -1,20 +1,27 @@
-name: KHATAWAS Android Release
+name: KHATAWAS Android Release Pipeline
 
 on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: 'Release tag (e.g. v0.1.0)'
-        required: false
-        default: ''
-      prerelease:
-        description: 'Mark as pre-release'
+      publish_release:
+        description: 'Publish as a GitHub Release (requires valid signing secrets)'
         type: boolean
         required: true
-        default: true
+        default: false
+      version_override:
+        description: 'Version override (e.g. 1.0.0)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -25,24 +32,35 @@ concurrency:
 
 jobs:
   build-and-release:
-    name: Build, Sign, Validate & Publish Release APK
+    name: Build, Validate & Release APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Source Code with Submodules
         uses: actions/checkout@v4
         with:
+          submodules: recursive
           fetch-depth: 0
 
-      - name: Set up Java 17
+      - name: Verify RNNoise Submodule Population
+        run: |
+          if [ ! -f "app/src/main/cpp/rnnoise/src/denoise.c" ]; then
+            echo "::error::RNNoise git submodule was not populated properly during checkout."
+            exit 1
+          fi
+          echo "RNNoise submodule successfully verified at app/src/main/cpp/rnnoise"
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
+      - name: Set up Android SDK, NDK & CMake
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'ndk;27.1.12297006 cmake;3.22.1 platforms;android-34 build-tools;34.0.0'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -50,180 +68,203 @@ jobs:
           gradle-home-cache-cleanup: true
 
       - name: Determine Version
-        id: version_step
+        id: ver
         run: |
-          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
-            TAG="${{ github.event.inputs.tag_name }}"
+          if [ -n "${{ github.event.inputs.version_override }}" ]; then
+            TAG="v${{ github.event.inputs.version_override }}"
+            VERSION="${{ github.event.inputs.version_override }}"
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
           else
-            TAG="v0.1.0"
+            VERSION="1.0"
+            TAG="v1.0"
           fi
-          VERSION="${TAG#v}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Building KHATAWAS release tag: ${TAG} (version ${VERSION})"
+          echo "Target build: tag=${TAG}, version=${VERSION}"
 
-      - name: Validate Signing Secrets Configuration
+      - name: Evaluate Release Signing Secrets
+        id: signing_check
         run: |
-          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
-            echo "::error::Release build aborted: ANDROID_KEYSTORE_BASE64 secret is not configured in GitHub repository secrets."
-            echo "::error::Signed production releases cannot be published without a valid release keystore."
-            exit 1
-          fi
-          if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ] || [ -z "${{ secrets.KEY_ALIAS }}" ] || [ -z "${{ secrets.KEY_PASSWORD }}" ]; then
-            echo "::error::Release build aborted: Missing one or more required signing secrets (KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)."
-            exit 1
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && \
+             [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] && \
+             [ -n "${{ secrets.KEY_ALIAS }}" ] && \
+             [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
+            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
+            echo "Signing secrets detected. Release build will be signed."
+          else
+            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Missing signing secrets (ANDROID_KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)."
+            echo "::warning::Release publication will be blocked; unsigned build will proceed for CI validation only."
           fi
 
-      - name: Decode Release Keystore
+      - name: Prepare Keystore File
+        if: steps.signing_check.outputs.has_secrets == 'true'
         run: |
           KEYSTORE_DIR=$(mktemp -d)
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "${KEYSTORE_DIR}/release.keystore"
           chmod 600 "${KEYSTORE_DIR}/release.keystore"
-          echo "KEYSTORE_PATH=${KEYSTORE_DIR}/release.keystore" >> "$GITHUB_ENV"
+          echo "KEYSTORE_FILE_PATH=${KEYSTORE_DIR}/release.keystore" >> "$GITHUB_ENV"
           echo "KEYSTORE_DIR=${KEYSTORE_DIR}" >> "$GITHUB_ENV"
 
-      - name: Grant Execute Permission to gradlew
+      - name: Make Gradle Wrapper Executable
         run: chmod +x gradlew
 
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --no-daemon
+        run: ./gradlew test --no-daemon
 
       - name: Run Release Lint
         run: ./gradlew lintVitalRelease --no-daemon
 
-      - name: Build Signed Release APK
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Build Release APK
         env:
-          KEYSTORE_FILE: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_FILE: ${{ env.KEYSTORE_FILE_PATH }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           ./gradlew assembleRelease \
-            -PversionName="${{ steps.version_step.outputs.version }}" \
+            -PversionName="${{ steps.ver.outputs.version }}" \
             --no-daemon
 
-      - name: Secure Clean-up of Keystore File
+      - name: Secure Clean-up of Keystore
         if: always()
         run: |
           if [ -n "${{ env.KEYSTORE_DIR }}" ] && [ -d "${{ env.KEYSTORE_DIR }}" ]; then
             rm -rf "${{ env.KEYSTORE_DIR }}"
-            echo "Temporary keystore securely erased from CI runner."
+            echo "Temporary keystore securely purged."
           fi
 
-      - name: Verify Signed APK Existence
+      - name: Locate Output APK & Verify Integrity
+        id: apk_audit
         run: |
-          RELEASE_APK="app/build/outputs/apk/release/app-release.apk"
-          if [ ! -f "$RELEASE_APK" ]; then
-            echo "::error::Expected signed release APK at $RELEASE_APK was not generated."
-            ls -la app/build/outputs/apk/release/ || true
-            exit 1
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+          if [ "${{ steps.signing_check.outputs.has_secrets }}" == "true" ]; then
+            APK_SRC="app/build/outputs/apk/release/app-release.apk"
+            if [ ! -f "$APK_SRC" ]; then
+              echo "::error::Signed release APK was not generated at $APK_SRC."
+              exit 1
+            fi
+            echo "Verifying APK signature with apksigner:"
+            "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$APK_SRC"
+            echo "signing_status=Signed (v2 Scheme)" >> "$GITHUB_OUTPUT"
+          else
+            APK_SRC="app/build/outputs/apk/release/app-release-unsigned.apk"
+            if [ ! -f "$APK_SRC" ]; then
+              echo "::error::Release APK was not generated at $APK_SRC."
+              exit 1
+            fi
+            echo "signing_status=Unsigned (CI validation only)" >> "$GITHUB_OUTPUT"
           fi
-          echo "RELEASE_APK_PATH=$RELEASE_APK" >> "$GITHUB_ENV"
+          echo "apk_src=$APK_SRC" >> "$GITHUB_OUTPUT"
 
-      - name: Verify APK Signature with apksigner
+      - name: Inspect Package Identity & Metadata
         run: |
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
-          echo "Using Android build tools: $BUILD_TOOLS_DIR"
-          "$BUILD_TOOLS_DIR/apksigner" verify --verbose "${{ env.RELEASE_APK_PATH }}"
+          "$BUILD_TOOLS_DIR/aapt2" dump badging "${{ steps.apk_audit.outputs.apk_src }}" | grep -E "package:|sdkVersion:|targetSdkVersion:|application-label:|native-code:"
 
-      - name: Verify Package Metadata
+      - name: Prepare Release Artifacts & Generate Checksum
+        id: bundle
         run: |
-          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
-          "$BUILD_TOOLS_DIR/aapt2" dump badging "${{ env.RELEASE_APK_PATH }}" | grep -E "package:|sdkVersion:|targetSdkVersion:|application-label:|native-code:"
-
-      - name: Package Release Assets & Compute Checksum
-        id: assets
-        run: |
-          mkdir -p release-dist
-          TAG="${{ steps.version_step.outputs.tag }}"
+          mkdir -p dist
+          TAG="${{ steps.ver.outputs.tag }}"
+          VERSION="${{ steps.ver.outputs.version }}"
           APK_NAME="KHATAWAS-${TAG}-release.apk"
           CHECKSUM_NAME="KHATAWAS-${TAG}-SHA256.txt"
+          BUILD_INFO_NAME="KHATAWAS-${TAG}-build-info.txt"
 
-          cp "${{ env.RELEASE_APK_PATH }}" "release-dist/${APK_NAME}"
+          cp "${{ steps.apk_audit.outputs.apk_src }}" "dist/${APK_NAME}"
 
-          cd release-dist
+          cd dist
           sha256sum "${APK_NAME}" > "${CHECKSUM_NAME}"
           SHA256_HASH=$(cut -d ' ' -f 1 "${CHECKSUM_NAME}")
           APK_SIZE_BYTES=$(stat -c%s "${APK_NAME}")
           APK_SIZE_MB=$(awk "BEGIN {printf \"%.2f\", ${APK_SIZE_BYTES}/(1024*1024)}")
           cd ..
 
+          # Generate Build Info Metadata
+          cat << EOF > "dist/${BUILD_INFO_NAME}"
+          KHATAWAS Release Build Metadata
+          ==================================
+          Application ID:   com.khatawas
+          Version Name:     ${VERSION}
+          Version Code:     1
+          Release Tag:      ${TAG}
+          Commit SHA:       ${{ github.sha }}
+          Build Timestamp:  $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          Target ABIs:      armeabi-v7a, arm64-v8a, x86_64
+          Signing Status:   ${{ steps.apk_audit.outputs.signing_status }}
+          Min SDK:          24 (Android 7.0)
+          Target SDK:       34 (Android 14)
+          SHA-256 Checksum: ${SHA256_HASH}
+          File Size:        ${APK_SIZE_MB} MB (${APK_SIZE_BYTES} bytes)
+
+          GNANI API Credential Security Note:
+          -----------------------------------
+          To prevent credential extraction and unauthorized account billing,
+          privileged GNANI API keys are not compiled into this public release APK.
+          Real-time speech recognition (STT) and voice synthesis (TTS) can be
+          connected via authenticated server proxy or client environment configuration.
+          EOF
+
           echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
           echo "checksum_name=${CHECKSUM_NAME}" >> "$GITHUB_OUTPUT"
+          echo "build_info_name=${BUILD_INFO_NAME}" >> "$GITHUB_OUTPUT"
           echo "sha256=${SHA256_HASH}" >> "$GITHUB_OUTPUT"
           echo "size_mb=${APK_SIZE_MB}" >> "$GITHUB_OUTPUT"
-          echo "size_bytes=${APK_SIZE_BYTES}" >> "$GITHUB_OUTPUT"
 
-      - name: Generate Release Notes
-        run: |
-          RELEASE_DATE=$(date -u +"%Y-%m-%d")
-          cat << 'EOF' > RELEASE_NOTES.md
-          ## KHATAWAS ${{ steps.version_step.outputs.tag }} — Rural-First Android Release
-
-          **Release Date:** ${RELEASE_DATE}  
-          **Package:** \`com.khatawas\`  
-          **Supported Android Versions:** Android 7.0 (Nougat, API 24) to Android 14 (API 34)  
-          **Architectures (ABIs):** \`arm64-v8a\`, \`armeabi-v7a\`, \`x86_64\`  
-
-          ---
-
-          ### Release Assets & Integrity
-
-          | Asset | Size | SHA-256 Checksum |
-          |---|---|---|
-          | \`${{ steps.assets.outputs.apk_name }}\` | ${{ steps.assets.outputs.size_mb }} MB (${{ steps.assets.outputs.size_bytes }} B) | \`${{ steps.assets.outputs.sha256 }}\` |
-          | \`${{ steps.assets.outputs.checksum_name }}\` | Text | — |
-
-          To verify file integrity before installation on Linux/macOS:
-          \`\`\`bash
-          sha256sum -c ${{ steps.assets.outputs.checksum_name }}
-          \`\`\`
-          Or on Windows PowerShell:
-          \`\`\`powershell
-          (Get-FileHash -Algorithm SHA256 ./${{ steps.assets.outputs.apk_name }}).Hash -eq "${{ steps.assets.outputs.sha256 }}"
-          \`\`\`
-
-          ---
-
-          ### What's in this Release
-
-          - **Rural-First UI/UX:** High-contrast 60dp touch targets, card-based layout, and Hindi/Kannada/English localization designed for small shopkeepers.
-          - **Offline-First Secure Ledger:** SQLite database with SQLCipher AES-256 encryption. Transactions are committed locally before cloud sync.
-          - **On-Device Voice & AI Intelligence:** Gnani speech recognition engine, RNNoise audio denoising, and INT8 quantized on-device student model.
-          - **SurrealDB Native Graph Relations:** Edge relationships (\`family_of\`, \`owns_customer\`, \`has_transaction\`) and entity disambiguation for spoken references (*e.g., "Arun ke papa"*).
-          - **Privacy-First Masked Display:** Sensitive balances and amounts start masked (\`###XXX\`) until unlocked via Administrator PIN or Android BiometricPrompt.
-
-          ---
-
-          ### Installation Instructions
-
-          1. Download \`${{ steps.assets.outputs.apk_name }}\` from the Assets section below.
-          2. Open the downloaded APK on your Android device.
-          3. If prompted by Android, tap **Settings** and allow **Install unknown apps** for your browser or file manager (do not disable system security globally).
-          4. Tap **Install** and then open **KHATAWAS**.
-          5. Grant the microphone permission when prompted if you wish to use voice entry.
-
-          ---
-
-          ### Known Limitations & Testing Status
-
-          - **Testing Status:** Pre-release test build verified via automated Gradle unit tests (11 suites), Android Lint, APK signature verification (v2 scheme), and real-device smoke test on physical Android hardware (Vivo / ARM64).
-          - **Voice Input:** Requires local audio permissions. Real-time cloud sync requires an active connection to your KHATAWAS SurrealDB backend.
-          EOF
-          sed -i "s/\${RELEASE_DATE}/${RELEASE_DATE}/g" RELEASE_NOTES.md
+      - name: Upload Workflow Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: KHATAWAS-${{ steps.ver.outputs.tag }}-artifacts
+          path: dist/
+          retention-days: 30
 
       - name: Publish GitHub Release
+        if: |
+          (startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_release == 'true') &&
+          steps.signing_check.outputs.has_secrets == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version_step.outputs.tag }}
-          name: KHATAWAS ${{ steps.version_step.outputs.tag }} — Android Testing Release
-          body_path: RELEASE_NOTES.md
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: KHATAWAS ${{ steps.ver.outputs.tag }} — Android Testing Release
           draft: false
           prerelease: true
+          body: |
+            ## KHATAWAS ${{ steps.ver.outputs.tag }} — Android Testing Release
+
+            > **Warning:** This is an initial pre-release testing build intended for controlled device verification. It is not a production-certified Google Play release.
+
+            ### Integrity & Checksum
+            - **Asset:** \`${{ steps.bundle.outputs.apk_name }}\` (${{ steps.bundle.outputs.size_mb }} MB)
+            - **SHA-256:** \`${{ steps.bundle.outputs.sha256 }}\`
+            - **Commit SHA:** \`${{ github.sha }}\`
+            - **Signing Scheme:** v2 verified
+
+            ### Installation Instructions
+            1. Download \`${{ steps.bundle.outputs.apk_name }}\` from the release assets below.
+            2. Tap the downloaded APK to install.
+            3. If Android prompts **Install unknown apps**, allow it for your browser or file manager (do not disable Android security globally).
+            4. Open **KHATAWAS** and grant microphone permissions when prompted for voice features.
+
+            ### GNANI Speech API Security Notice
+            To safeguard provider account credentials, private GNANI API keys are strictly omitted from public APK binaries. Voice features operate in local shadow mode unless connected to an authorized KHATAWAS backend proxy.
           files: |
-            release-dist/${{ steps.assets.outputs.apk_name }}
-            release-dist/${{ steps.assets.outputs.checksum_name }}
+            dist/${{ steps.bundle.outputs.apk_name }}
+            dist/${{ steps.bundle.outputs.checksum_name }}
+            dist/${{ steps.bundle.outputs.build_info_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Block Unsigned Public Release Publication
+        if: |
+          (startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_release == 'true') &&
+          steps.signing_check.outputs.has_secrets != 'true'
+        run: |
+          echo "::error::PUBLIC RELEASE BLOCKED: Signing secrets (ANDROID_KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) are not configured."
+          echo "::error::Unsigned APK was built for CI validation and uploaded to workflow artifacts, but cannot be published as a GitHub Release."
+          exit 1
