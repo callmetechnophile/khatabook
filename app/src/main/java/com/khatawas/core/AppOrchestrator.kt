@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
  * Simplified Technical English (ASD STE-100) compliant.
- * Thread-safe application orchestrator for deterministic parsing, DB, and TTS.
+ * Thread-safe application orchestrator for deterministic parsing, encrypted DB, and TTS feedback.
  */
 
 package com.khatawas.core
@@ -14,6 +14,7 @@ import com.khatawas.audio.RnnoiseProcessor
 import com.khatawas.audio.VoiceFeedback
 import com.khatawas.db.LedgerDatabase
 import com.khatawas.logic.LedgerParser
+import com.khatawas.logic.ParseResult
 import com.khatawas.logic.Transaction
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -37,7 +38,9 @@ class AppOrchestrator(context: Context) {
 
     // Callback invoked on the main thread when a transaction is saved
     var onTransactionSaved: ((Transaction) -> Unit)? = null
+    var onBatchTransactionsSaved: ((List<Transaction>, Long) -> Unit)? = null
     var onTransactionRejected: ((String) -> Unit)? = null
+    var onQueryResult: ((String, Long) -> Unit)? = null
 
     // Dedicated single-thread executor for all encrypted SQLite operations
     private val dbExecutor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -50,7 +53,6 @@ class AppOrchestrator(context: Context) {
 
     /**
      * Process real transaction text from live speech recognition.
-     * Parameter text: Speech recognition transcript to process.
      */
     fun processRealTransaction(text: String) {
         processTransactionInternal(text)
@@ -58,7 +60,6 @@ class AppOrchestrator(context: Context) {
 
     /**
      * Process mock transaction text for test verification.
-     * Parameter text: Speech recognition transcript to process.
      */
     fun processMockTransaction(text: String) {
         processTransactionInternal(text)
@@ -66,47 +67,95 @@ class AppOrchestrator(context: Context) {
 
     /**
      * Internal processor for utterance strings.
-     * Step 1: Parse the utterance using Kotlin Regex and FSM dictionary.
-     * Step 2: Submit the transaction insert to the single-thread DB executor.
-     * Step 3: On insert success, post runnable to main thread handler to trigger TTS confirmation and UI update.
+     * Evaluates structured parse results: success, ambiguity, queries, or corrections.
      */
     private fun processTransactionInternal(text: String) {
-        // [STEP: PARSING]
-        val transaction = LedgerParser.parseUtterance(text)
-        Log.i(TAG, "Parser result: $transaction")
+        val parseResult = LedgerParser.parseStructured(text)
+        Log.i(TAG, "Parser structured result: $parseResult")
 
-        if (transaction == null) {
-            Log.w(TAG, "Failed to resolve transaction from utterance")
-            mainHandler.post {
-                onTransactionRejected?.invoke("Could not identify a safe transaction. Check the amount, customer, and credit/payment wording.")
-            }
-            return
-        }
+        when (parseResult) {
+            is ParseResult.Success -> {
+                val transactions = parseResult.transactions
+                dbExecutor.execute {
+                    try {
+                        val success = ledgerDatabase.insertTransactionsAtomic(transactions)
+                        if (success) {
+                            val customer = transactions.first().name
+                            val netBalance = ledgerDatabase.getCustomerBalancePaise(customer)
 
-        // [STEP: DB INSERT]
-        dbExecutor.execute {
-            try {
-                val rowId = ledgerDatabase.insertTransaction(transaction)
-
-                if (rowId > 0L) {
-                    Log.i(TAG, "DB insert OK, id = $rowId")
-
-                    // [STEP: TTS TRIGGER & UI UPDATE]
-                    mainHandler.post {
-                        Log.i(TAG, "TTS triggered")
-                        voiceFeedback.speakConfirmation(transaction)
-                        onTransactionSaved?.invoke(transaction)
-                    }
-                } else {
-                    Log.e(TAG, "DB insert failed. Returned row ID: $rowId")
-                    mainHandler.post {
-                        onTransactionRejected?.invoke("The ledger entry could not be saved. Please try again.")
+                            mainHandler.post {
+                                if (transactions.size == 1) {
+                                    val t = transactions.first()
+                                    voiceFeedback.speakConfirmation(t)
+                                    onTransactionSaved?.invoke(t)
+                                } else {
+                                    val ttsMsg = "${customer} ke ${transactions.size} hisaab likh liye. Kul baaki balance ₹${netBalance / 100} hai"
+                                    voiceFeedback.speak(ttsMsg)
+                                    onBatchTransactionsSaved?.invoke(transactions, netBalance)
+                                    onTransactionSaved?.invoke(transactions.first())
+                                }
+                            }
+                        } else {
+                            mainHandler.post {
+                                onTransactionRejected?.invoke("Database insert failed. Please try again.")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "DB exception: ${e.message}", e)
+                        mainHandler.post {
+                            onTransactionRejected?.invoke("Database error. The entry was not saved.")
+                        }
                     }
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "DB insert exception: ${e.message}", e)
+            }
+
+            is ParseResult.Ambiguous -> {
+                Log.w(TAG, "Ambiguous utterance: ${parseResult.reason}")
                 mainHandler.post {
-                    onTransactionRejected?.invoke("Database error. The entry was not confirmed as saved.")
+                    voiceFeedback.speak(parseResult.clarificationQuestion)
+                    onTransactionRejected?.invoke(parseResult.clarificationQuestion)
+                }
+            }
+
+            is ParseResult.Correction -> {
+                val newAmountPaise = parseResult.newAmountPaise
+                dbExecutor.execute {
+                    try {
+                        val updated = ledgerDatabase.updateLastTransactionAmount(newAmountPaise)
+                        mainHandler.post {
+                            if (updated) {
+                                val msg = "Amount badal kar ₹${newAmountPaise / 100} kar diya gaya hai"
+                                voiceFeedback.speak(msg)
+                                onTransactionSaved?.invoke(Transaction("Pichhla hisaab", newAmountPaise, "UPDATED", 0))
+                            } else {
+                                onTransactionRejected?.invoke("Koi pichhla transaction update karne ke liye nahi mila.")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error updating transaction: ${e.message}", e)
+                    }
+                }
+            }
+
+            is ParseResult.Query -> {
+                val customer = parseResult.customerName
+                dbExecutor.execute {
+                    try {
+                        val balancePaise = ledgerDatabase.getCustomerBalancePaise(customer)
+                        mainHandler.post {
+                            val msg = "${customer} ka kul baaki hisaab ₹${balancePaise / 100} hai"
+                            voiceFeedback.speak(msg)
+                            onQueryResult?.invoke(customer, balancePaise)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching balance: ${e.message}", e)
+                    }
+                }
+            }
+
+            is ParseResult.Failure -> {
+                mainHandler.post {
+                    onTransactionRejected?.invoke(parseResult.errorMessage)
                 }
             }
         }
@@ -114,10 +163,9 @@ class AppOrchestrator(context: Context) {
 
     /**
      * Process real-time 480-sample audio chunk through RNNoise noise suppression.
-     * Parameter audioData: Array of 480 float samples.
      */
     fun processAudioChunk(audioData: FloatArray) {
-        rnnoiseProcessor.nativeProcessFrame(audioData, audioOutputBuffer)
+        rnnoiseProcessor.processFrame(audioData, audioOutputBuffer)
     }
 
     /**

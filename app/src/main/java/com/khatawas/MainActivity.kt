@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
- * Main voice-ledger screen with visible connection, transcript, and saved-entry feedback.
+ * Main voice-ledger screen with visible connection, real-time transcript, and saved-entry feedback.
  */
 
 package com.khatawas
@@ -9,6 +9,8 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.MotionEvent
 import android.widget.Button
@@ -21,8 +23,8 @@ import androidx.core.content.ContextCompat
 import com.khatawas.audio.AudioPipeline
 import com.khatawas.audio.GnaniSttClient
 import com.khatawas.audio.SttListener
+import com.khatawas.audio.SttState
 import com.khatawas.core.AppOrchestrator
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,6 +39,9 @@ class MainActivity : AppCompatActivity() {
 
     @Volatile
     private var sessionActive = false
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var releaseTimeoutRunnable: Runnable? = null
 
     private lateinit var btnPushToTalk: Button
     private lateinit var tvStatus: TextView
@@ -68,15 +73,28 @@ class MainActivity : AppCompatActivity() {
 
         appOrchestrator.onTransactionSaved = { transaction ->
             val direction = if (transaction.type == "CREDIT") "Credit added" else "Payment received"
-            tvResult.text = "${transaction.name}  ·  ₹${transaction.amount}"
+            tvResult.text = "${transaction.name}  ·  ₹${transaction.amountRupees}"
             tvResultDetail.text = "$direction  •  Date offset: ${transaction.dateOffset} day(s)"
-            tvStatus.text = "Saved to your local ledger."
+            tvStatus.text = "Saved to your local encrypted ledger."
+        }
+
+        appOrchestrator.onBatchTransactionsSaved = { transactions, netBalancePaise ->
+            val count = transactions.size
+            tvResult.text = "${transactions.first().name}  ·  $count entries"
+            tvResultDetail.text = "Net outstanding balance: ₹${netBalancePaise / 100.0}"
+            tvStatus.text = "Multiple transactions saved to local ledger."
+        }
+
+        appOrchestrator.onQueryResult = { customer, balancePaise ->
+            tvResult.text = "$customer  ·  Balance"
+            tvResultDetail.text = "Net outstanding: ₹${balancePaise / 100.0}"
+            tvStatus.text = "Ledger query result."
         }
 
         appOrchestrator.onTransactionRejected = { reason ->
             tvStatus.text = reason
-            tvResult.text = "No entry saved"
-            tvResultDetail.text = "Review the transcript before trying again."
+            tvResult.text = "Action required"
+            tvResultDetail.text = "Review the spoken sentence or respond to clarification."
         }
 
         switchRnnoise.setOnCheckedChangeListener { _, isChecked ->
@@ -112,7 +130,6 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    btnPushToTalk.text = "HOLD TO SPEAK"
                     stopListening()
                     true
                 }
@@ -122,34 +139,57 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startListening() {
+        releaseTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        cleanupClient()
+
         sessionActive = true
         val client = GnaniSttClient()
         gnaniSttClient = client
 
         client.setListener(object : SttListener {
+            override fun onPartialTranscription(text: String) {
+                runOnUiThread {
+                    tvTranscript.text = text
+                }
+            }
+
             override fun onTranscriptionReceived(text: String) {
                 runOnUiThread {
                     tvTranscript.text = text
-                    tvStatus.text = "Transcript received. Checking the ledger entry…"
+                    tvStatus.text = "Transcript received: processing ledger entry…"
+                    btnPushToTalk.text = "HOLD TO SPEAK"
                 }
                 appOrchestrator.processRealTransaction(text)
+                mainHandler.postDelayed({ cleanupClient() }, 1200)
             }
 
             override fun onSttFailed() {
                 runOnUiThread {
                     tvStatus.text = "Speech service failed. No entry was confirmed."
                     tvConnection.text = "●  Speech service error"
+                    btnPushToTalk.text = "HOLD TO SPEAK"
+                    cleanupClient()
                 }
             }
         })
 
-        client.onConnectionState = { state ->
+        client.onStateChanged = { state ->
             runOnUiThread {
-                tvConnection.text = "●  $state"
-                if (state.startsWith("Connected") && sessionActive) {
-                    btnPushToTalk.text = "LISTENING…"
-                    tvStatus.text = "Microphone active. Speak now."
-                    audioPipeline.start()
+                when (state) {
+                    SttState.DISCONNECTED -> tvConnection.text = "●  Ready — press and hold to speak"
+                    SttState.CONNECTING -> tvConnection.text = "●  Connecting to speech service…"
+                    SttState.INITIALIZING -> tvConnection.text = "●  Initializing speech session…"
+                    SttState.READY -> {
+                        tvConnection.text = "●  Connected. Microphone active."
+                        if (sessionActive) {
+                            btnPushToTalk.text = "LISTENING…"
+                            tvStatus.text = "Microphone active. Speak now."
+                            audioPipeline.start()
+                        }
+                    }
+                    SttState.STREAMING -> tvConnection.text = "●  Streaming speech to Gnani…"
+                    SttState.CLOSING -> tvConnection.text = "●  Finalizing transcript…"
+                    SttState.ERROR -> tvConnection.text = "●  Speech service error"
                 }
             }
         }
@@ -162,15 +202,38 @@ class MainActivity : AppCompatActivity() {
         audioPipeline.stop()
 
         val client = gnaniSttClient
+        if (client != null && (client.currentState == SttState.READY || client.currentState == SttState.STREAMING)) {
+            btnPushToTalk.text = "PROCESSING…"
+            tvStatus.text = "Audio recorded. Transcribing with Gnani…"
+            client.flushAndFinish()
+
+            releaseTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+            val timeoutRunnable = Runnable {
+                if (gnaniSttClient == client) {
+                    cleanupClient()
+                    tvStatus.text = "Transcription timeout. Hold button to try again."
+                    btnPushToTalk.text = "HOLD TO SPEAK"
+                }
+            }
+            releaseTimeoutRunnable = timeoutRunnable
+            mainHandler.postDelayed(timeoutRunnable, 4000)
+        } else {
+            cleanupClient()
+            btnPushToTalk.text = "HOLD TO SPEAK"
+        }
+    }
+
+    private fun cleanupClient() {
+        releaseTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        releaseTimeoutRunnable = null
+        val client = gnaniSttClient
         gnaniSttClient = null
         try {
             client?.release()
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing STT client: ${e.message}", e)
         }
-
         tvConnection.text = "●  Ready — press and hold to speak"
-        tvStatus.text = "Recording stopped. Check the transcript and latest entry below."
     }
 
     override fun onRequestPermissionsResult(
@@ -192,7 +255,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        stopListening()
+        sessionActive = false
+        audioPipeline.stop()
+        cleanupClient()
         appOrchestrator.destroy()
         super.onDestroy()
     }
