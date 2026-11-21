@@ -38,7 +38,7 @@ android {
         String apiKey = properties.getProperty("GNANI_API_KEY") ?: project.findProperty("GNANI_API_KEY") ?: ""
         buildConfigField "String", "GNANI_API_KEY", "\"${apiKey}\""
 
-        String sttUrl = properties.getProperty("GNANI_STT_WS_URL") ?: project.findProperty("GNANI_STT_WS_URL") ?: "wss://asr.gnani.ai/stt/v3/stream"
+        String sttUrl = properties.getProperty("GNANI_STT_WS_URL") ?: project.findProperty("GNANI_STT_WS_URL") ?: "wss://api.vachana.ai/stt/v3/stream"
         buildConfigField "String", "GNANI_STT_WS_URL", "\"${sttUrl}\""
 
         String ttsUrl = properties.getProperty("GNANI_TTS_WS_URL") ?: project.findProperty("GNANI_TTS_WS_URL") ?: "wss://asr.gnani.ai/api/v1/tts"
