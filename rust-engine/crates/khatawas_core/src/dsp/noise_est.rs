@@ -67,11 +67,11 @@ impl NoiseEstimator {
             } else {
                 // Check if this frequency bin contains active speech
                 let snr = sm / (n_prev + 1e-4);
-                if snr < 2.0 {
-                    // Stationary noise region: adapt upwards slowly
+                if snr < 3.5 {
+                    // Stationary noise region: adapt upwards
                     self.noise_power[k] = 0.985 * n_prev + 0.015 * sm;
                 }
-                // If snr >= 2.0, active speech formant detected: freeze noise estimate!
+                // If snr >= 3.5, active speech formant detected: freeze noise estimate to prevent absorbing speech!
             }
         }
     }

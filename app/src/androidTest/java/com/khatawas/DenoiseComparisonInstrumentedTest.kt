@@ -369,4 +369,115 @@ class DenoiseComparisonInstrumentedTest {
             rustSpectral.destroy()
         }
     }
+
+    private fun computeSiSdr(target: DoubleArray, estimate: DoubleArray): Double {
+        var dot = 0.0
+        var targetNormSq = 0.0
+        for (i in target.indices) {
+            dot += target[i] * estimate[i]
+            targetNormSq += target[i] * target[i]
+        }
+        val alpha = if (targetNormSq > 1e-12) dot / targetNormSq else 1.0
+        var eTarget = 0.0
+        var eRes = 0.0
+        for (i in target.indices) {
+            val sTarget = alpha * target[i]
+            val sRes = estimate[i] - sTarget
+            eTarget += sTarget * sTarget
+            eRes += sRes * sRes
+        }
+        return if (eRes > 1e-12) 10.0 * log10(eTarget / eRes) else 50.0
+    }
+
+    @Test
+    fun test6_ObjectiveMetricsSiSdrAndMemory() {
+        Log.i(TAG, "Executing test6_ObjectiveMetricsSiSdrAndMemory")
+
+        val rnnoise = RnnoiseProcessor()
+        val rustWiener = RustDenoiseProcessor(RustDenoiseProcessor.MODE_WIENER_FILTER)
+        val rustSpectral = RustDenoiseProcessor(RustDenoiseProcessor.MODE_SPECTRAL_SUBTRACTION)
+        val rustCombined = RustDenoiseProcessor(RustDenoiseProcessor.MODE_COMBINED)
+
+        try {
+            val frames = 40
+            val totalSamples = frames * FRAME_SIZE
+            val cleanSignal = DoubleArray(totalSamples)
+            val noisySignal = DoubleArray(totalSamples)
+            val outRnnoise = DoubleArray(totalSamples)
+            val outWiener = DoubleArray(totalSamples)
+            val outSpectral = DoubleArray(totalSamples)
+            val outCombined = DoubleArray(totalSamples)
+
+            val inFrame = FloatArray(FRAME_SIZE)
+            val outFrameRnn = FloatArray(FRAME_SIZE)
+            val outFrameWie = FloatArray(FRAME_SIZE)
+            val outFrameSpe = FloatArray(FRAME_SIZE)
+            val outFrameCom = FloatArray(FRAME_SIZE)
+
+            // Warm up / calibrate first 15 frames with ambient
+            for (f in 0 until 15) {
+                for (i in 0 until FRAME_SIZE) {
+                    val t = (f * FRAME_SIZE + i) / SAMPLE_RATE
+                    inFrame[i] = (400.0f * sin(2.0 * PI * 60.0 * t)).toFloat()
+                }
+                rnnoise.processFrame(inFrame, outFrameRnn)
+                rustWiener.processFrame(inFrame, outFrameWie)
+                rustSpectral.processFrame(inFrame, outFrameSpe)
+                rustCombined.processFrame(inFrame, outFrameCom)
+            }
+
+            // Generate mixed speech and noise
+            for (f in 0 until frames) {
+                for (i in 0 until FRAME_SIZE) {
+                    val idx = f * FRAME_SIZE + i
+                    val t = idx / SAMPLE_RATE
+                    val s = (3000.0f * sin(2.0 * PI * 350.0 * t) + 1800.0f * sin(2.0 * PI * 1200.0 * t)).toFloat()
+                    val n = (1200.0f * sin(2.0 * PI * 60.0 * t) + 800.0f * cos(2.0 * PI * 180.0 * t)).toFloat()
+                    cleanSignal[idx] = s.toDouble()
+                    noisySignal[idx] = (s + n).toDouble()
+                    inFrame[i] = s + n
+                }
+
+                rnnoise.processFrame(inFrame, outFrameRnn)
+                rustWiener.processFrame(inFrame, outFrameWie)
+                rustSpectral.processFrame(inFrame, outFrameSpe)
+                rustCombined.processFrame(inFrame, outFrameCom)
+
+                for (i in 0 until FRAME_SIZE) {
+                    val idx = f * FRAME_SIZE + i
+                    outRnnoise[idx] = outFrameRnn[i].toDouble()
+                    outWiener[idx] = outFrameWie[i].toDouble()
+                    outSpectral[idx] = outFrameSpe[i].toDouble()
+                    outCombined[idx] = outFrameCom[i].toDouble()
+                }
+            }
+
+            val sisdrNoisy = computeSiSdr(cleanSignal, noisySignal)
+            val sisdrRnnoise = computeSiSdr(cleanSignal, outRnnoise)
+            val sisdrWiener = computeSiSdr(cleanSignal, outWiener)
+            val sisdrSpectral = computeSiSdr(cleanSignal, outSpectral)
+            val sisdrCombined = computeSiSdr(cleanSignal, outCombined)
+
+            val runtime = Runtime.getRuntime()
+            val usedMemoryKb = (runtime.totalMemory() - runtime.freeMemory()) / 1024
+
+            Log.i(BENCH_TAG, "=================================================================")
+            Log.i(BENCH_TAG, "       KHATAWAS OBJECTIVE METRICS: SI-SDR & MEMORY               ")
+            Log.i(BENCH_TAG, "=================================================================")
+            Log.i(BENCH_TAG, "Input Noisy SI-SDR:               ${"%.2f".format(sisdrNoisy)} dB")
+            Log.i(BENCH_TAG, "RNNoise C++ Output SI-SDR:        ${"%.2f".format(sisdrRnnoise)} dB (Delta: ${"%.2f".format(sisdrRnnoise - sisdrNoisy)} dB)")
+            Log.i(BENCH_TAG, "Rust Wiener Filter SI-SDR:        ${"%.2f".format(sisdrWiener)} dB (Delta: ${"%.2f".format(sisdrWiener - sisdrNoisy)} dB)")
+            Log.i(BENCH_TAG, "Rust Spectral Subtraction SI-SDR: ${"%.2f".format(sisdrSpectral)} dB (Delta: ${"%.2f".format(sisdrSpectral - sisdrNoisy)} dB)")
+            Log.i(BENCH_TAG, "Rust Combined Engine SI-SDR:      ${"%.2f".format(sisdrCombined)} dB (Delta: ${"%.2f".format(sisdrCombined - sisdrNoisy)} dB)")
+            Log.i(BENCH_TAG, "Process Heap Memory Used:         $usedMemoryKb KB")
+            Log.i(BENCH_TAG, "=================================================================")
+
+            assertTrue("Rust Wiener SI-SDR must improve over input noisy SI-SDR", sisdrWiener > sisdrNoisy)
+        } finally {
+            rnnoise.destroy()
+            rustWiener.destroy()
+            rustSpectral.destroy()
+            rustCombined.destroy()
+        }
+    }
 }
