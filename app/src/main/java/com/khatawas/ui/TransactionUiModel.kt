@@ -109,6 +109,20 @@ data class TransactionUiModel(
             return sdf.format(Date(timestamp))
         }
 
+    fun getDisplayAmount(isUnlocked: Boolean): String {
+        return if (isUnlocked) formattedAmount else com.khatawas.auth.PrivacyManager.MASK_VALUE
+    }
+
+    fun getDisplayCustomerName(isUnlocked: Boolean, maskCustomerNames: Boolean): String {
+        return if (isUnlocked || !maskCustomerNames) customerName else com.khatawas.auth.PrivacyManager.MASK_VALUE
+    }
+
+    fun getAccessibleDescription(isUnlocked: Boolean, maskCustomerNames: Boolean): String {
+        val nameLabel = if (isUnlocked || !maskCustomerNames) customerName else com.khatawas.auth.PrivacyManager.ACCESSIBLE_NAME_HIDDEN
+        val amountLabel = if (isUnlocked) formattedAmount else com.khatawas.auth.PrivacyManager.ACCESSIBLE_AMOUNT_HIDDEN
+        return "$nameLabel, ${category.label} of $amountLabel on $formattedDateTime"
+    }
+
     val accessibleDescription: String
-        get() = "$customerName, ${category.label} of $formattedAmount on $formattedDateTime"
+        get() = getAccessibleDescription(isUnlocked = true, maskCustomerNames = false)
 }

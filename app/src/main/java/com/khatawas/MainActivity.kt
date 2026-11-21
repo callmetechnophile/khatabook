@@ -9,13 +9,17 @@ import android.content.Context
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.InputType
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -31,6 +35,8 @@ import com.khatawas.audio.AudioPipeline
 import com.khatawas.audio.GnaniSttClient
 import com.khatawas.audio.SttListener
 import com.khatawas.audio.SttState
+import com.khatawas.auth.BiometricAuthHelper
+import com.khatawas.auth.PrivacyManager
 import com.khatawas.core.AppOrchestrator
 import com.khatawas.sync.SyncManager
 import com.khatawas.ui.IndianCurrencyFormatter
@@ -80,13 +86,58 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rvTransactions: RecyclerView
     private lateinit var transactionAdapter: TransactionAdapter
 
+    // Privacy and Authentication Views
+    private lateinit var llPrivacyBanner: LinearLayout
+    private lateinit var tvPrivacyStatus: TextView
+    private lateinit var tvPrivacySubtitle: TextView
+    private lateinit var btnAuthAction: Button
+    private lateinit var btnPrivacyConfig: Button
+
+    private var lastInteractionTimestamp: Long = System.currentTimeMillis()
+    private var cachedLatestAmountString: String = "No ledger entry saved yet."
+    private var cachedLatestDetailString: String = "A confirmed entry will be displayed here."
+    private var cachedBalancePaise: Long = 0L
+
+    private val inactivityCheckRunnable = object : Runnable {
+        override fun run() {
+            val timeout = PrivacyManager.getInactivityTimeoutMs(this@MainActivity)
+            if (PrivacyManager.isUnlocked && (System.currentTimeMillis() - lastInteractionTimestamp >= timeout)) {
+                PrivacyManager.lockSession()
+                updatePrivacyUi()
+                refreshLedgerAndTransactions(currentFilteredCustomer)
+                Toast.makeText(this@MainActivity, "Session locked due to inactivity", Toast.LENGTH_SHORT).show()
+            }
+            mainHandler.postDelayed(this, 5000L)
+        }
+    }
+
     private val bgExecutor = Executors.newSingleThreadExecutor()
     private var currentFilteredCustomer: String? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Secure window protection to prevent recent-app switcher previews and unauthorized screenshots
+        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+
+        // Mandatory locked state on application startup
+        PrivacyManager.lockSession()
+
         setContentView(R.layout.activity_main)
+
+        llPrivacyBanner = findViewById(R.id.ll_privacy_banner)
+        tvPrivacyStatus = findViewById(R.id.tv_privacy_status)
+        tvPrivacySubtitle = findViewById(R.id.tv_privacy_subtitle)
+        btnAuthAction = findViewById(R.id.btn_auth_action)
+        btnPrivacyConfig = findViewById(R.id.btn_privacy_config)
+
+        btnAuthAction.setOnClickListener {
+            handleAuthAction()
+        }
+
+        btnPrivacyConfig.setOnClickListener {
+            showPrivacyConfigDialog()
+        }
 
         btnPushToTalk = findViewById(R.id.btn_push_to_talk)
         tvStatus = findViewById(R.id.tv_status)
@@ -108,7 +159,10 @@ class MainActivity : AppCompatActivity() {
         llEmptyState = findViewById(R.id.ll_empty_state)
         rvTransactions = findViewById(R.id.rv_transactions)
 
-        transactionAdapter = TransactionAdapter { item ->
+        transactionAdapter = TransactionAdapter(
+            isUnlocked = PrivacyManager.isUnlocked,
+            maskCustomerNames = PrivacyManager.isMaskCustomerNamesEnabled(this)
+        ) { item ->
             // Filter by clicked customer
             refreshLedgerAndTransactions(item.customerName)
         }
@@ -145,8 +199,8 @@ class MainActivity : AppCompatActivity() {
 
         appOrchestrator.onTransactionSaved = { transaction ->
             val direction = if (transaction.type == "CREDIT") "Credit added" else if (transaction.type == "PAYMENT") "Payment received" else "Reversal processed"
-            tvResult.text = "${transaction.name}  ·  ${IndianCurrencyFormatter.formatPaise(transaction.amountPaise)}"
-            tvResultDetail.text = "$direction  •  Date offset: ${transaction.dateOffset} day(s)"
+            cachedLatestAmountString = "${transaction.name}  ·  ${IndianCurrencyFormatter.formatPaise(transaction.amountPaise)}"
+            cachedLatestDetailString = "$direction  •  Date offset: ${transaction.dateOffset} day(s)"
             tvStatus.text = "Saved to your local encrypted ledger."
             syncManager.triggerImmediateSync()
             refreshLedgerAndTransactions(currentFilteredCustomer)
@@ -154,16 +208,16 @@ class MainActivity : AppCompatActivity() {
 
         appOrchestrator.onBatchTransactionsSaved = { transactions, netBalancePaise ->
             val count = transactions.size
-            tvResult.text = "${transactions.first().name}  ·  $count entries"
-            tvResultDetail.text = "Net outstanding balance: ${IndianCurrencyFormatter.formatPaise(netBalancePaise)}"
+            cachedLatestAmountString = "${transactions.first().name}  ·  $count entries"
+            cachedLatestDetailString = "Net outstanding balance: ${IndianCurrencyFormatter.formatPaise(netBalancePaise)}"
             tvStatus.text = "Multiple transactions saved to local ledger."
             syncManager.triggerImmediateSync()
             refreshLedgerAndTransactions(currentFilteredCustomer)
         }
 
         appOrchestrator.onQueryResult = { customer, balancePaise ->
-            tvResult.text = "$customer  ·  Balance"
-            tvResultDetail.text = "Net outstanding: ${IndianCurrencyFormatter.formatPaise(balancePaise)}"
+            cachedLatestAmountString = "$customer  ·  Balance"
+            cachedLatestDetailString = "Net outstanding: ${IndianCurrencyFormatter.formatPaise(balancePaise)}"
             tvStatus.text = "Ledger query result."
             refreshLedgerAndTransactions(customer)
         }
@@ -267,12 +321,14 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Clear Data") { _, _ ->
                 val success = appOrchestrator.ledgerDatabase.purgeAllData()
                 if (success) {
-                    tvResult.text = "All data cleared"
-                    tvResultDetail.text = "Ledger and customer database has been reset."
+                    cachedLatestAmountString = "All data cleared"
+                    cachedLatestDetailString = "Ledger and customer database has been reset."
+                    cachedBalancePaise = 0L
                     tvStatus.text = "Local database purged successfully."
                     tvTranscript.text = "Nothing recognized yet."
                     syncManager.triggerImmediateSync()
                     refreshLedgerAndTransactions(null)
+                    updatePrivacyUi()
                     Toast.makeText(this, "Data purged successfully", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this, "Failed to purge data", Toast.LENGTH_SHORT).show()
@@ -539,14 +595,11 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 runOnUiThread {
+                    cachedBalancePaise = balancePaise
                     if (filterCustomer.isNullOrBlank()) {
-                        tvLedgerCustomerName.text = "All Customers"
-                        tvLedgerBalance.text = IndianCurrencyFormatter.formatPaise(balancePaise)
                         tvLedgerBalanceSubtitle.text = "Authoritative outstanding balance across all customers."
                         btnFilterReset.visibility = View.GONE
                     } else {
-                        tvLedgerCustomerName.text = filterCustomer
-                        tvLedgerBalance.text = IndianCurrencyFormatter.formatPaise(balancePaise)
                         tvLedgerBalanceSubtitle.text = "Net outstanding udhaar balance for $filterCustomer."
                         btnFilterReset.visibility = View.VISIBLE
                     }
@@ -560,11 +613,223 @@ class MainActivity : AppCompatActivity() {
                         llEmptyState.visibility = View.GONE
                         rvTransactions.visibility = View.VISIBLE
                     }
+
+                    updatePrivacyUi()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error refreshing ledger transactions: ${e.message}", e)
             }
         }
+    }
+
+    /**
+     * Updates all UI components to reflect locked or unlocked privacy state.
+     * Enforces default masking (###XXX) across dashboard, customer details, and transaction history.
+     */
+    fun updatePrivacyUi() {
+        val isUnlocked = PrivacyManager.isUnlocked
+        val maskNames = PrivacyManager.isMaskCustomerNamesEnabled(this)
+
+        if (isUnlocked) {
+            tvPrivacyStatus.text = "🔓 UNLOCKED"
+            tvPrivacySubtitle.text = "Tap LOCK to mask all financial values"
+            btnAuthAction.text = "LOCK"
+            btnAuthAction.setBackgroundColor(ContextCompat.getColor(this, R.color.text_secondary))
+
+            tvResult.text = cachedLatestAmountString
+            tvResult.contentDescription = cachedLatestAmountString
+            tvResultDetail.text = cachedLatestDetailString
+            tvResultDetail.contentDescription = cachedLatestDetailString
+
+            tvLedgerBalance.text = IndianCurrencyFormatter.formatPaise(cachedBalancePaise)
+            tvLedgerBalance.contentDescription = IndianCurrencyFormatter.formatPaise(cachedBalancePaise)
+
+            val customerLabel = currentFilteredCustomer ?: "All Customers"
+            tvLedgerCustomerName.text = customerLabel
+            tvLedgerCustomerName.contentDescription = customerLabel
+        } else {
+            tvPrivacyStatus.text = "🔒 PRIVACY LOCKED"
+            tvPrivacySubtitle.text = "Financial values masked with ###XXX"
+            btnAuthAction.text = "UNLOCK"
+            btnAuthAction.setBackgroundColor(Color.parseColor("#2457D6"))
+
+            tvResult.text = PrivacyManager.MASK_VALUE
+            tvResult.contentDescription = PrivacyManager.ACCESSIBLE_AMOUNT_HIDDEN
+            tvResultDetail.text = PrivacyManager.ACCESSIBLE_DETAILS_HIDDEN
+            tvResultDetail.contentDescription = PrivacyManager.ACCESSIBLE_DETAILS_HIDDEN
+
+            tvLedgerBalance.text = PrivacyManager.MASK_VALUE
+            tvLedgerBalance.contentDescription = PrivacyManager.ACCESSIBLE_BALANCE_HIDDEN
+
+            val customerLabel = if (maskNames) PrivacyManager.MASK_VALUE else currentFilteredCustomer ?: "All Customers"
+            tvLedgerCustomerName.text = customerLabel
+            tvLedgerCustomerName.contentDescription = if (maskNames) PrivacyManager.ACCESSIBLE_NAME_HIDDEN else customerLabel
+        }
+
+        transactionAdapter.isUnlocked = isUnlocked
+        transactionAdapter.maskCustomerNames = maskNames
+        transactionAdapter.notifyDataSetChanged()
+    }
+
+    /**
+     * Handles explicit unlock and lock actions.
+     */
+    private fun handleAuthAction() {
+        if (PrivacyManager.isUnlocked) {
+            // Manual lock action
+            PrivacyManager.lockSession()
+            updatePrivacyUi()
+            refreshLedgerAndTransactions(currentFilteredCustomer)
+            Toast.makeText(this, "Privacy mode locked", Toast.LENGTH_SHORT).show()
+        } else {
+            // User-controlled authentication: try BiometricPrompt first
+            if (BiometricAuthHelper.canAuthenticateWithBiometrics(this)) {
+                BiometricAuthHelper.authenticate(
+                    activity = this,
+                    title = "Unlock KHATAWAS",
+                    subtitle = "Verify fingerprint or face to unmask financial data",
+                    onSuccess = {
+                        runOnUiThread {
+                            lastInteractionTimestamp = System.currentTimeMillis()
+                            updatePrivacyUi()
+                            refreshLedgerAndTransactions(currentFilteredCustomer)
+                            Toast.makeText(this@MainActivity, "Unlocked successfully", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onError = {
+                        runOnUiThread {
+                            promptPinAuthentication()
+                        }
+                    },
+                    onUsePinFallback = {
+                        runOnUiThread {
+                            promptPinAuthentication()
+                        }
+                    }
+                )
+            } else {
+                promptPinAuthentication()
+            }
+        }
+    }
+
+    private fun promptPinAuthentication() {
+        if (!PrivacyManager.hasConfiguredPin(this)) {
+            promptPinSetup("Create Administrator PIN", "Set a 4 to 8 digit administrator PIN to protect your ledger data.")
+            return
+        }
+
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            hint = "Enter 4-8 digit PIN"
+            setPadding(40, 30, 40, 30)
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Enter Administrator PIN")
+            .setView(input)
+            .setPositiveButton("Unlock") { _, _ ->
+                val enteredPin = input.text.toString()
+                if (PrivacyManager.verifyPin(this, enteredPin)) {
+                    lastInteractionTimestamp = System.currentTimeMillis()
+                    updatePrivacyUi()
+                    refreshLedgerAndTransactions(currentFilteredCustomer)
+                    Toast.makeText(this, "Unlocked with PIN", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Incorrect PIN. Ledger remains locked.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun promptPinSetup(title: String, message: String) {
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            hint = "Enter 4-8 digit PIN"
+            setPadding(40, 30, 40, 30)
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setView(input)
+            .setPositiveButton("Set PIN") { _, _ ->
+                val enteredPin = input.text.toString()
+                if (PrivacyManager.configurePin(this, enteredPin)) {
+                    PrivacyManager.unlockSession()
+                    lastInteractionTimestamp = System.currentTimeMillis()
+                    updatePrivacyUi()
+                    refreshLedgerAndTransactions(currentFilteredCustomer)
+                    Toast.makeText(this, "Administrator PIN configured successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "PIN must be between 4 and 8 digits", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showPrivacyConfigDialog() {
+        val options = arrayOf(
+            if (PrivacyManager.hasConfiguredPin(this)) "Change Administrator PIN" else "Set Administrator PIN",
+            if (PrivacyManager.isMaskCustomerNamesEnabled(this)) "Customer Names: Masked (###XXX)" else "Customer Names: Visible",
+            "Inactivity Lock: ${PrivacyManager.getInactivityTimeoutMs(this) / 1000}s"
+        )
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Privacy & Security Settings")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> promptPinSetup("Configure Administrator PIN", "Enter a 4 to 8 digit administrator PIN.")
+                    1 -> {
+                        val current = PrivacyManager.isMaskCustomerNamesEnabled(this)
+                        PrivacyManager.setMaskCustomerNamesEnabled(this, !current)
+                        updatePrivacyUi()
+                        refreshLedgerAndTransactions(currentFilteredCustomer)
+                        val status = if (!current) "Customer names will be masked" else "Customer names will be visible"
+                        Toast.makeText(this, status, Toast.LENGTH_SHORT).show()
+                    }
+                    2 -> {
+                        val timeoutOptions = arrayOf("30 seconds", "60 seconds", "2 minutes", "5 minutes")
+                        val timeoutValues = longArrayOf(30_000L, 60_000L, 120_000L, 300_000L)
+                        MaterialAlertDialogBuilder(this)
+                            .setTitle("Select Inactivity Lock Timeout")
+                            .setItems(timeoutOptions) { _, idx ->
+                                PrivacyManager.setInactivityTimeoutMs(this, timeoutValues[idx])
+                                Toast.makeText(this, "Inactivity timeout set to ${timeoutOptions[idx]}", Toast.LENGTH_SHORT).show()
+                            }
+                            .show()
+                    }
+                }
+            }
+            .setPositiveButton("Done", null)
+            .show()
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        lastInteractionTimestamp = System.currentTimeMillis()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Requirement 3: Relock when the application moves to the background
+        PrivacyManager.lockSession()
+        updatePrivacyUi()
+        mainHandler.removeCallbacks(inactivityCheckRunnable)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        PrivacyManager.lockSession()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updatePrivacyUi()
+        mainHandler.removeCallbacks(inactivityCheckRunnable)
+        mainHandler.postDelayed(inactivityCheckRunnable, 5000L)
     }
 
     override fun onDestroy() {
@@ -574,6 +839,7 @@ class MainActivity : AppCompatActivity() {
         syncManager.shutdown()
         appOrchestrator.destroy()
         bgExecutor.shutdown()
+        mainHandler.removeCallbacks(inactivityCheckRunnable)
         super.onDestroy()
     }
 }

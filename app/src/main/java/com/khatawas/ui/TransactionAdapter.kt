@@ -17,6 +17,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.khatawas.R
 
 class TransactionAdapter(
+    var isUnlocked: Boolean = false,
+    var maskCustomerNames: Boolean = true,
     private val onItemClick: ((TransactionUiModel) -> Unit)? = null
 ) : ListAdapter<TransactionUiModel, TransactionAdapter.TransactionViewHolder>(DiffCallback) {
 
@@ -36,7 +38,7 @@ class TransactionAdapter(
     }
 
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
-        holder.bind(getItem(position))
+        holder.bind(getItem(position), isUnlocked, maskCustomerNames)
     }
 
     class TransactionViewHolder(
@@ -52,12 +54,27 @@ class TransactionAdapter(
         private val tvTimestamp: TextView = itemView.findViewById(R.id.tv_timestamp)
         private val tvNote: TextView = itemView.findViewById(R.id.tv_note)
 
-        fun bind(item: TransactionUiModel) {
+        fun bind(item: TransactionUiModel, isUnlocked: Boolean, maskCustomerNames: Boolean) {
             val context = itemView.context
 
-            tvCustomerName.text = item.customerName
-            tvAmount.text = item.formattedAmount
-            tvPaymentMethod.text = item.paymentMethod
+            val displayAmount = item.getDisplayAmount(isUnlocked)
+            val displayName = item.getDisplayCustomerName(isUnlocked, maskCustomerNames)
+
+            tvCustomerName.text = displayName
+            tvCustomerName.contentDescription = if (isUnlocked || !maskCustomerNames) {
+                displayName
+            } else {
+                com.khatawas.auth.PrivacyManager.ACCESSIBLE_NAME_HIDDEN
+            }
+
+            tvAmount.text = displayAmount
+            tvAmount.contentDescription = if (isUnlocked) {
+                item.formattedAmount
+            } else {
+                com.khatawas.auth.PrivacyManager.ACCESSIBLE_AMOUNT_HIDDEN
+            }
+
+            tvPaymentMethod.text = if (isUnlocked) item.paymentMethod else com.khatawas.auth.PrivacyManager.maskPaymentReference(item.paymentMethod)
             tvReviewStatus.text = item.reviewStatus
             tvTimestamp.text = item.formattedDateTime
 
@@ -72,14 +89,14 @@ class TransactionAdapter(
 
             // Transaction description / user note
             if (item.note.isNotBlank()) {
-                tvNote.text = item.note
+                tvNote.text = if (isUnlocked) item.note else com.khatawas.auth.PrivacyManager.MASK_VALUE
                 tvNote.visibility = View.VISIBLE
             } else {
                 tvNote.visibility = View.GONE
             }
 
             // Accessibility: comprehensive content description
-            itemView.contentDescription = item.accessibleDescription
+            itemView.contentDescription = item.getAccessibleDescription(isUnlocked, maskCustomerNames)
 
             itemView.setOnClickListener {
                 onItemClick?.invoke(item)
