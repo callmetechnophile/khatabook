@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0c0b0a" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23c2410c'/%3E%3Crect x='25' y='12' width='14' height='26' rx='7' fill='white'/%3E%3Cpath d='M17 30a15 15 0 0 0 30 0M32 45v8' stroke='white' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 <title>KHATAWAS</title>
 <style>
 /* Layout: one calm column. Translucent header over scrolling content, one big control, grouped lists. Tokens first. */
@@ -127,7 +131,15 @@ footer { margin-top: .5rem; font-size: .8125rem; color: var(--mute); display: fl
 </head>
 <body>
 <header><div class="in">
-  <div class="brand"><a href="/" style="color: inherit; text-decoration: none;">Khatawas</a><small id="sub">Voice ledger for your kirana store</small></div>
+  <div class="brand" style="display: flex; align-items: center; gap: 0.75rem;">
+    <a href="/" style="display: flex; align-items: center; text-decoration: none;">
+      <img src="/assets/khatawas-icon.png" alt="KHATAWAS Brand" width="36" height="36" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
+    </a>
+    <div>
+      <a href="/" style="color: inherit; text-decoration: none;">Khatawas</a>
+      <small id="sub" style="display: block;">Voice ledger for your kirana store</small>
+    </div>
+  </div>
   <a href="/" style="font-size: 0.8125rem; font-weight: 600; color: var(--mute); text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 99px; border: 1px solid var(--line); margin-left: auto;">← Story</a>
   <button class="lang" id="langBtn" aria-haspopup="dialog" aria-label="Change language"><span id="langName">हिन्दी</span>
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>

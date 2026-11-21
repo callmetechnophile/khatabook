@@ -48,6 +48,28 @@ Inspired by Apple product landing pages and Human Interface Guidelines (HIG), th
 
 ---
 
+### 2.3 Unified Brand Icon & Cross-Platform Integrity
+To maintain visual consistency between the Android native app and the web application:
+- **Canonical Master Icon Asset**: `app/src/main/res/mipmap-nodpi/ic_launcher.png` (Android launcher icon).
+- **Master SHA-256 Checksum**: `7728775ff9b56520786b70806c750e9db5a76f2c985b15ae0530c2d3b8f5ad35`.
+- **Artwork Integrity**: Both platforms display the identical artwork without independent redrawing, recoloring, cropping, or distortions.
+- **Shared Brand Asset Directory (`brand/`)**:
+  - `brand/khatawas-master-icon.png` (Exact byte-for-byte 192x192 master)
+  - `brand/khatawas-master-icon-transparent.png` (Transparent squircle corners variant)
+  - `brand/web/` (`favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png`, `khatawas-icon-512.png`, `site.webmanifest`)
+  - `brand/android/mipmap-nodpi/ic_launcher.png`
+  - `brand/BRAND_IDENTITY_GUIDELINES.md`
+  - `brand/sync-brand-assets.py` (Automated synchronization script)
+- **Web Touchpoints**:
+  - Favicon & Browser Tab: Multi-resolution `favicon.ico` + PNG icons
+  - Navigation Header: Unified `<img src="/assets/khatawas-icon.png" class="brand-icon">` on `/` and `/app`
+  - Hero Opening Screen: Displayed prominently as the master brand emblem in Act 1
+- **Android Touchpoints**:
+  - System Launcher: `android:icon="@mipmap/ic_launcher"`
+  - In-App Action Bar: `ImageView` with `@mipmap/ic_launcher` in `activity_main.xml`
+
+---
+
 ## 3. Storytelling Narrative Structure
 
 The page flows through a natural five-act progression:

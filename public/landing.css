@@ -1186,3 +1186,26 @@ img, svg {
     gap: 1.5rem;
   }
 }
+
+/* Hero Brand Emblem */
+.hero-brand-emblem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.hero-brand-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 30px rgba(245, 158, 11, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+
+.hero-brand-icon:hover {
+  transform: scale(1.05);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 0 45px rgba(245, 158, 11, 0.4);
+}
