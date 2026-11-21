@@ -1,17 +1,6 @@
-[package]
-name = "rust_khatawas"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-name = "rust_khatawas"
-crate-type = ["staticlib", "cdylib", "rlib"]
-
-[dependencies]
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
+[workspace]
+members = [
+    "crates/khatawas_core",
+    "crates/khatawas_android",
+]
+resolver = "2"

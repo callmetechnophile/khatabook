@@ -1,0 +1,11 @@
+[package]
+name = "khatawas_android"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "khatawas_android"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+khatawas_core = { path = "../khatawas_core" }

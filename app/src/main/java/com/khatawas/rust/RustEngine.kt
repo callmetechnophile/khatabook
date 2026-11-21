@@ -1,11 +1,8 @@
 package com.khatawas.rust
 
-import android.util.Log
-
 /**
  * JNI bindings for the KHATAWAS Rust computational engine.
- * Provides high-performance FIR decimation, speech transcript parsing,
- * pronoun guard evaluation, and integer paise ledger balance computation.
+ * Connects Android platform code to the khatawas_android and khatawas_core workspace.
  */
 object RustEngine {
     private const val TAG = "RustEngine"
@@ -13,18 +10,35 @@ object RustEngine {
 
     init {
         try {
-            System.loadLibrary("rust_khatawas")
+            System.loadLibrary("khatawas_android")
             isLoaded = true
-            Log.i(TAG, "Successfully loaded librust_khatawas.so native library (version: ${nativeGetVersion()})")
-        } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "Failed to load librust_khatawas.so native library", e)
+            safeLogI(TAG, "Successfully loaded libkhatawas_android.so")
+        } catch (e: Throwable) {
+            safeLogW(TAG, "Native library libkhatawas_android.so not loaded in host environment: ${e.message}")
             isLoaded = false
+        }
+    }
+
+    private fun safeLogI(tag: String, msg: String) {
+        try {
+            android.util.Log.i(tag, msg)
+        } catch (_: Throwable) {
+            // JVM host unit test environment without Android framework mock
+        }
+    }
+
+    private fun safeLogW(tag: String, msg: String) {
+        try {
+            android.util.Log.w(tag, msg)
+        } catch (_: Throwable) {
+            // JVM host unit test environment without Android framework mock
         }
     }
 
     fun isNativeLoaded(): Boolean = isLoaded
 
     external fun nativeGetVersion(): String
+    external fun nativeAdd(a: Int, b: Int): Int
     external fun nativeHealthCheck(): Boolean
     external fun nativeFirProcess(input: FloatArray, output: FloatArray): Int
     external fun nativeParseUtterance(utterance: String): String
