@@ -77,6 +77,9 @@ class MainActivity : AppCompatActivity() {
         btnAiDisclosure = findViewById(R.id.btn_ai_disclosure)
         btnPurgeData = findViewById(R.id.btn_purge_data)
 
+        // Phase 5 Runtime JNI Verification for Milestone 2
+        runMilestone2Verification()
+
         appOrchestrator = AppOrchestrator(this)
         audioPipeline = AudioPipeline(appOrchestrator.rnnoiseProcessor)
         syncManager = SyncManager(this, appOrchestrator.ledgerDatabase)
@@ -339,6 +342,43 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Mic permission required", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun runMilestone2Verification() {
+        Log.i("KHATAWAS_M2_VERIFICATION", "=== BEGIN MILESTONE 2 JNI RUNTIME VERIFICATION ===")
+        val isLoaded = com.khatawas.rust.RustEngine.isNativeLoaded()
+        Log.i("KHATAWAS_M2_VERIFICATION", "Test A [Library Loading]: isNativeLoaded = $isLoaded")
+
+        if (isLoaded) {
+            try {
+                // Test B: Native Version
+                val version = com.khatawas.rust.RustEngine.nativeGetVersion()
+                Log.i("KHATAWAS_M2_VERIFICATION", "Test B [Native Version]: $version")
+
+                // Test C: Native Arithmetic
+                val addStandard = com.khatawas.rust.RustEngine.nativeAdd(20, 22)
+                val addNegative = com.khatawas.rust.RustEngine.nativeAdd(-5, 5)
+                val addBoundary = com.khatawas.rust.RustEngine.nativeAdd(Int.MAX_VALUE, 1)
+                Log.i("KHATAWAS_M2_VERIFICATION", "Test C [Native Arithmetic]: 20 + 22 = $addStandard, -5 + 5 = $addNegative, MAX + 1 = $addBoundary")
+
+                // Test D: Native Health Check
+                val health = com.khatawas.rust.RustEngine.nativeHealthCheck()
+                Log.i("KHATAWAS_M2_VERIFICATION", "Test D [Health Check]: $health")
+
+                // Test E: Repeated Invocation Stability (1,000 iterations)
+                var allCorrect = true
+                for (i in 0 until 1000) {
+                    if (com.khatawas.rust.RustEngine.nativeAdd(i, 1) != i + 1) {
+                        allCorrect = false
+                        break
+                    }
+                }
+                Log.i("KHATAWAS_M2_VERIFICATION", "Test E [Repeated Invocation]: 1000 iterations successful = $allCorrect")
+            } catch (e: Throwable) {
+                Log.e("KHATAWAS_M2_VERIFICATION", "JNI Execution Exception", e)
+            }
+        }
+        Log.i("KHATAWAS_M2_VERIFICATION", "=== END MILESTONE 2 JNI RUNTIME VERIFICATION ===")
     }
 
     override fun onDestroy() {
