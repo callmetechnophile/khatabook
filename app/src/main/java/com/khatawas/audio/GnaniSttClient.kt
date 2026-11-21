@@ -50,6 +50,7 @@ class GnaniSttClient(
 
     private var listener: SttListener? = null
     var fallbackTts: (() -> Unit)? = null
+    var onConnectionState: ((String) -> Unit)? = null
 
     private val workerExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
@@ -61,6 +62,7 @@ class GnaniSttClient(
      * Connect to the WebSocket on a dedicated background thread.
      */
     fun connectOnBackgroundThread() {
+        onConnectionState?.invoke("Connecting to speech service…")
         workerExecutor.execute {
             try {
                 if (!isOpen) {
@@ -75,6 +77,7 @@ class GnaniSttClient(
 
     override fun onOpen(handshakedata: ServerHandshake?) {
         Log.i(TAG, "Gnani STT WebSocket opened")
+        onConnectionState?.invoke("Connected. Starting microphone…")
         val apiKey = BuildConfig.GNANI_API_KEY
         
         // Initial payload specifying audio format: 16kHz, 16-bit PCM, Mono, target language hi-IN
@@ -102,10 +105,12 @@ class GnaniSttClient(
 
     override fun onClose(code: Int, reason: String?, remote: Boolean) {
         Log.i(TAG, "Gnani STT WebSocket closed. Code: $code, Reason: $reason")
+        onConnectionState?.invoke("Disconnected")
     }
 
     override fun onError(ex: Exception?) {
         Log.e(TAG, "Gnani STT WebSocket error: ${ex?.message}", ex)
+        onConnectionState?.invoke("Speech service error")
         handleFailure()
     }
 

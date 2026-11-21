@@ -1,7 +1,6 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
- * Simplified Technical English (ASD STE-100) compliant.
- * Production-hardened activity with permission gate, A/B noise toggle, AudioPipeline, and Gnani STT.
+ * Main voice-ledger screen with visible connection, transcript, and saved-entry feedback.
  */
 
 package com.khatawas
@@ -23,12 +22,8 @@ import com.khatawas.audio.AudioPipeline
 import com.khatawas.audio.GnaniSttClient
 import com.khatawas.audio.SttListener
 import com.khatawas.core.AppOrchestrator
+import java.util.Locale
 
-/**
- * Main Activity for KHATAWAS.
- * Implements runtime permission gate, A/B noise suppression toggle,
- * zero-allocation AudioPipeline, and Java-WebSocket streaming to Gnani STT.
- */
 class MainActivity : AppCompatActivity() {
 
     companion object {
@@ -40,8 +35,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var audioPipeline: AudioPipeline
     private var gnaniSttClient: GnaniSttClient? = null
 
+    @Volatile
+    private var sessionActive = false
+
     private lateinit var btnPushToTalk: Button
     private lateinit var tvStatus: TextView
+    private lateinit var tvConnection: TextView
+    private lateinit var tvTranscript: TextView
+    private lateinit var tvResult: TextView
+    private lateinit var tvResultDetail: TextView
     private lateinit var switchRnnoise: SwitchCompat
 
     @SuppressLint("ClickableViewAccessibility")
@@ -49,36 +51,39 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // View bindings
         btnPushToTalk = findViewById(R.id.btn_push_to_talk)
         tvStatus = findViewById(R.id.tv_status)
+        tvConnection = findViewById(R.id.tv_connection)
+        tvTranscript = findViewById(R.id.tv_transcript)
+        tvResult = findViewById(R.id.tv_result)
+        tvResultDetail = findViewById(R.id.tv_result_detail)
         switchRnnoise = findViewById(R.id.switch_rnnoise)
 
-        // Initialize core orchestrator and 48kHz->16kHz audio pipeline
         appOrchestrator = AppOrchestrator(this)
         audioPipeline = AudioPipeline(appOrchestrator.rnnoiseProcessor)
 
-        // Wire AudioPipeline to send 16kHz PCM chunks to Gnani STT
         audioPipeline.onPcm16kReady = { chunk ->
             gnaniSttClient?.sendAudioChunk(chunk)
         }
 
-        // Update status text on the main thread when a transaction is saved
         appOrchestrator.onTransactionSaved = { transaction ->
-            runOnUiThread {
-                val statusText = "${transaction.name} | ${transaction.amount} | ${transaction.type}"
-                tvStatus.text = statusText
-            }
+            val direction = if (transaction.type == "CREDIT") "Credit added" else "Payment received"
+            tvResult.text = "${transaction.name}  ·  ₹${transaction.amount}"
+            tvResultDetail.text = "$direction  •  Date offset: ${transaction.dateOffset} day(s)"
+            tvStatus.text = "Saved to your local ledger."
         }
 
-        // Step 5: A/B Noise Suppression Toggle
+        appOrchestrator.onTransactionRejected = { reason ->
+            tvStatus.text = reason
+            tvResult.text = "No entry saved"
+            tvResultDetail.text = "Review the transcript before trying again."
+        }
+
         switchRnnoise.setOnCheckedChangeListener { _, isChecked ->
             audioPipeline.isRnnoiseEnabled = isChecked
-            switchRnnoise.text = if (isChecked) "RNNoise ON" else "RNNoise OFF"
-            Log.i(TAG, "RNNoise state changed: isEnabled = $isChecked")
+            switchRnnoise.text = if (isChecked) "Noise filter" else "Noise filter off"
         }
 
-        // Step 2: Runtime Permission Gate
         val hasPermission = ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.RECORD_AUDIO
@@ -95,16 +100,19 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        // Step 3 & 4: Push-to-Talk button touch handling
         btnPushToTalk.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    btnPushToTalk.text = "LISTENING..."
+                    if (!btnPushToTalk.isEnabled || sessionActive) return@setOnTouchListener true
+                    btnPushToTalk.text = "CONNECTING…"
+                    tvStatus.text = "Opening speech session. Keep holding the button."
+                    tvTranscript.text = "Waiting for speech…"
+                    tvConnection.text = "●  Connecting to speech service…"
                     startListening()
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    btnPushToTalk.text = "PUSH TO TALK"
+                    btnPushToTalk.text = "HOLD TO SPEAK"
                     stopListening()
                     true
                 }
@@ -113,49 +121,58 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Start live audio capture and WebSocket streaming.
-     */
     private fun startListening() {
-        // Initialize fresh STT WebSocket client for each recording session
+        sessionActive = true
         val client = GnaniSttClient()
+        gnaniSttClient = client
+
         client.setListener(object : SttListener {
             override fun onTranscriptionReceived(text: String) {
+                runOnUiThread {
+                    tvTranscript.text = text
+                    tvStatus.text = "Transcript received. Checking the ledger entry…"
+                }
                 appOrchestrator.processRealTransaction(text)
             }
 
             override fun onSttFailed() {
                 runOnUiThread {
-                    appOrchestrator.voiceFeedback.speak("Network slow. Try again.")
+                    tvStatus.text = "Speech service failed. No entry was confirmed."
+                    tvConnection.text = "●  Speech service error"
                 }
             }
         })
-        client.fallbackTts = {
-            appOrchestrator.voiceFeedback.speak("Network slow. Try again.")
+
+        client.onConnectionState = { state ->
+            runOnUiThread {
+                tvConnection.text = "●  $state"
+                if (state.startsWith("Connected") && sessionActive) {
+                    btnPushToTalk.text = "LISTENING…"
+                    tvStatus.text = "Microphone active. Speak now."
+                    audioPipeline.start()
+                }
+            }
         }
 
-        gnaniSttClient = client
         client.connectOnBackgroundThread()
-        audioPipeline.start()
     }
 
-    /**
-     * Stop audio capture and close WebSocket stream.
-     */
     private fun stopListening() {
+        sessionActive = false
         audioPipeline.stop()
+
+        val client = gnaniSttClient
+        gnaniSttClient = null
         try {
-            gnaniSttClient?.close()
+            client?.release()
         } catch (e: Exception) {
-            Log.e(TAG, "Error closing STT client: ${e.message}", e)
-        } finally {
-            gnaniSttClient = null
+            Log.e(TAG, "Error releasing STT client: ${e.message}", e)
         }
+
+        tvConnection.text = "●  Ready — press and hold to speak"
+        tvStatus.text = "Recording stopped. Check the transcript and latest entry below."
     }
 
-    /**
-     * Handle microphone runtime permission result.
-     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -165,19 +182,18 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_RECORD_AUDIO) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 btnPushToTalk.isEnabled = true
-                Log.i(TAG, "RECORD_AUDIO permission granted by user.")
+                tvStatus.text = "Microphone permission granted. Hold the button to speak."
             } else {
                 btnPushToTalk.isEnabled = false
+                tvStatus.text = "Microphone permission is required."
                 Toast.makeText(this, "Mic permission required", Toast.LENGTH_SHORT).show()
-                Log.w(TAG, "RECORD_AUDIO permission denied by user.")
             }
         }
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         stopListening()
-        audioPipeline.stop()
         appOrchestrator.destroy()
+        super.onDestroy()
     }
 }

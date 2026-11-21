@@ -37,6 +37,7 @@ class AppOrchestrator(context: Context) {
 
     // Callback invoked on the main thread when a transaction is saved
     var onTransactionSaved: ((Transaction) -> Unit)? = null
+    var onTransactionRejected: ((String) -> Unit)? = null
 
     // Dedicated single-thread executor for all encrypted SQLite operations
     private val dbExecutor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -75,7 +76,10 @@ class AppOrchestrator(context: Context) {
         Log.i(TAG, "Parser result: $transaction")
 
         if (transaction == null) {
-            Log.w(TAG, "Failed to resolve transaction from utterance: \"$text\"")
+            Log.w(TAG, "Failed to resolve transaction from utterance")
+            mainHandler.post {
+                onTransactionRejected?.invoke("Could not identify a safe transaction. Check the amount, customer, and credit/payment wording.")
+            }
             return
         }
 
@@ -95,9 +99,15 @@ class AppOrchestrator(context: Context) {
                     }
                 } else {
                     Log.e(TAG, "DB insert failed. Returned row ID: $rowId")
+                    mainHandler.post {
+                        onTransactionRejected?.invoke("The ledger entry could not be saved. Please try again.")
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "DB insert exception: ${e.message}", e)
+                mainHandler.post {
+                    onTransactionRejected?.invoke("Database error. The entry was not confirmed as saved.")
+                }
             }
         }
     }
