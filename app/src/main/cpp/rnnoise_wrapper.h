@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
  * Simplified Technical English (ASD STE-100) compliant.
- * Header file for RNNoise JNI wrapper.
+ * Header file for RNNoise JNI wrapper with per-instance state handle.
  */
 
 #ifndef KHATAWAS_RNNOISE_WRAPPER_H
@@ -9,43 +9,47 @@
 
 #include <jni.h>
 #include <rnnoise.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdint>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*
- * Initialize the RNNoise engine with embedded neural network weights.
+ * Initialize an RNNoise instance with embedded neural network weights.
+ * Returns 64-bit native pointer to DenoiseState as jlong.
  */
-JNIEXPORT void JNICALL
+JNIEXPORT jlong JNICALL
 Java_com_khatawas_audio_RnnoiseProcessor_nativeInit(
     JNIEnv *env,
     jobject thiz
 );
 
 /*
- * Process a single audio frame of 480 float32 PCM samples.
- * Parameter input: FloatArray containing 480 input samples.
- * Parameter output: FloatArray receiving 480 cleaned samples.
+ * Process a single audio frame of 480 float32 PCM samples for a specific instance.
+ * Parameter handle: 64-bit native pointer to DenoiseState.
+ * Parameter input: FloatArray containing at least 480 input samples.
+ * Parameter output: FloatArray receiving at least 480 cleaned samples.
  */
 JNIEXPORT void JNICALL
 Java_com_khatawas_audio_RnnoiseProcessor_nativeProcessFrame(
     JNIEnv *env,
     jobject thiz,
+    jlong handle,
     jfloatArray input,
     jfloatArray output
 );
 
 /*
- * Destroy the RNNoise engine and release native memory.
+ * Destroy the RNNoise instance and release native memory.
+ * Parameter handle: 64-bit native pointer to DenoiseState.
  */
 JNIEXPORT void JNICALL
 Java_com_khatawas_audio_RnnoiseProcessor_nativeDestroy(
     JNIEnv *env,
-    jobject thiz
+    jobject thiz,
+    jlong handle
 );
 
 #ifdef __cplusplus

@@ -1,108 +1,122 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
  * Simplified Technical English (ASD STE-100) compliant.
- * Source file for RNNoise JNI wrapper.
+ * Per-instance RNNoise JNI implementation with explicit lifecycle and array bounds validation.
  */
 
 #include "rnnoise_wrapper.h"
 #include <android/log.h>
+#include <cmath>
 #include <mutex>
 
 #define LOG_TAG "KhatawasRnnoise"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-// RNNoise operates on frames of exactly 480 samples at 48000 Hz (10 ms duration)
 static constexpr int RNNOISE_FRAME_SIZE = 480;
-
-// Global handle for the RNNoise denoise state
-static DenoiseState *g_denoise_state = nullptr;
-
-// Mutex lock to ensure thread safety
-static std::mutex g_state_mutex;
-
-// Static pre-allocated buffers to prevent memory allocation during real-time processing
-static float s_in_frame[RNNOISE_FRAME_SIZE];
-static float s_out_frame[RNNOISE_FRAME_SIZE];
 
 extern "C" {
 
 /*
- * Initialize the RNNoise engine.
- * Calls rnnoise_create(NULL).
- * The embedded neural network weights from rnnoise_data.h are loaded automatically.
+ * Initialize a new RNNoise engine instance.
+ * Returns the native DenoiseState address cast to jlong, or 0 on failure.
  */
-JNIEXPORT void JNICALL
+JNIEXPORT jlong JNICALL
 Java_com_khatawas_audio_RnnoiseProcessor_nativeInit(
     JNIEnv * /* env */,
     jobject /* thiz */
 ) {
-    std::lock_guard<std::mutex> lock(g_state_mutex);
-
-    // Free previous state if already initialized
-    if (g_denoise_state != nullptr) {
-        rnnoise_destroy(g_denoise_state);
-        g_denoise_state = nullptr;
+    // Call rnnoise_create with NULL to load embedded model weights
+    DenoiseState *state = rnnoise_create(nullptr);
+    if (state == nullptr) {
+        LOGE("Failed to allocate RNNoise state");
+        return 0;
     }
 
-    // Call rnnoise_create with NULL. Embedded model weights are used.
-    g_denoise_state = rnnoise_create(nullptr);
-    if (g_denoise_state == nullptr) {
-        LOGE("Failed to create RNNoise state with embedded weights");
-        return;
-    }
-
-    LOGI("RNNoise state initialized successfully");
+    LOGI("RNNoise instance %p allocated successfully", state);
+    return reinterpret_cast<jlong>(state);
 }
 
 /*
- * Process a single audio frame of 480 float32 PCM samples.
- * Uses stack/static buffers and GetFloatArrayRegion to ensure zero Java object allocations.
+ * Process a single audio frame of 480 float32 PCM samples for the specified instance.
+ * Validates handle, pointers, and array lengths before accessing buffers.
  */
 JNIEXPORT void JNICALL
 Java_com_khatawas_audio_RnnoiseProcessor_nativeProcessFrame(
     JNIEnv *env,
     jobject /* thiz */,
+    jlong handle,
     jfloatArray input,
     jfloatArray output
 ) {
+    if (handle == 0) {
+        LOGE("RNNoise processFrame called with null native handle");
+        return;
+    }
+
     if (input == nullptr || output == nullptr) {
-        LOGE("Input or output buffer is null");
+        LOGE("RNNoise processFrame called with null input or output array");
         return;
     }
 
-    std::lock_guard<std::mutex> lock(g_state_mutex);
-
-    if (g_denoise_state == nullptr) {
-        LOGE("RNNoise state is not initialized");
+    jsize inLen = env->GetArrayLength(input);
+    jsize outLen = env->GetArrayLength(output);
+    if (inLen < RNNOISE_FRAME_SIZE || outLen < RNNOISE_FRAME_SIZE) {
+        LOGE("Invalid array length: in=%d, out=%d (expected at least %d)", inLen, outLen, RNNOISE_FRAME_SIZE);
         return;
     }
 
-    // Copy 480 samples from Java array without allocating new memory
-    env->GetFloatArrayRegion(input, 0, RNNOISE_FRAME_SIZE, s_in_frame);
+    DenoiseState *state = reinterpret_cast<DenoiseState *>(handle);
+
+    // Frame buffers allocated on stack to ensure thread safety without shared global state
+    float inFrame[RNNOISE_FRAME_SIZE];
+    float outFrame[RNNOISE_FRAME_SIZE];
+
+    env->GetFloatArrayRegion(input, 0, RNNOISE_FRAME_SIZE, inFrame);
+
+    // Sanitize input values: ensure no NaN or Infinity enters RNNoise GRU layers
+    for (int i = 0; i < RNNOISE_FRAME_SIZE; ++i) {
+        float s = inFrame[i];
+        if (std::isnan(s) || std::isinf(s)) {
+            inFrame[i] = 0.0f;
+        }
+    }
 
     // Process audio frame through RNNoise neural network
-    rnnoise_process_frame(g_denoise_state, s_out_frame, s_in_frame);
+    rnnoise_process_frame(state, outFrame, inFrame);
 
-    // Write cleaned audio samples back to Java output array
-    env->SetFloatArrayRegion(output, 0, RNNOISE_FRAME_SIZE, s_out_frame);
+    // Sanitize and clamp output to [-32768.0f, 32767.0f] PCM16 range
+    for (int i = 0; i < RNNOISE_FRAME_SIZE; ++i) {
+        float s = outFrame[i];
+        if (std::isnan(s) || std::isinf(s)) {
+            s = 0.0f;
+        } else if (s > 32767.0f) {
+            s = 32767.0f;
+        } else if (s < -32768.0f) {
+            s = -32768.0f;
+        }
+        outFrame[i] = s;
+    }
+
+    env->SetFloatArrayRegion(output, 0, RNNOISE_FRAME_SIZE, outFrame);
 }
 
 /*
- * Destroy the RNNoise engine and release native memory.
+ * Destroy the RNNoise engine instance and release native memory.
  */
 JNIEXPORT void JNICALL
 Java_com_khatawas_audio_RnnoiseProcessor_nativeDestroy(
     JNIEnv * /* env */,
-    jobject /* thiz */
+    jobject /* thiz */,
+    jlong handle
 ) {
-    std::lock_guard<std::mutex> lock(g_state_mutex);
-
-    if (g_denoise_state != nullptr) {
-        rnnoise_destroy(g_denoise_state);
-        g_denoise_state = nullptr;
-        LOGI("RNNoise state destroyed and memory released");
+    if (handle == 0) {
+        return;
     }
+
+    DenoiseState *state = reinterpret_cast<DenoiseState *>(handle);
+    rnnoise_destroy(state);
+    LOGI("RNNoise instance %p destroyed successfully", state);
 }
 
-} // extern "C"
+}
