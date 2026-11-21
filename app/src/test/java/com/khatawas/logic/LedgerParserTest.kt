@@ -1,13 +1,12 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
  * Simplified Technical English (ASD STE-100) compliant.
- * Regression unit test suite for LedgerParser logic.
+ * Regression unit test suite for LedgerParser logic (Latin + Devanagari).
  */
 
 package com.khatawas.logic
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -31,20 +30,63 @@ class LedgerParserTest {
     }
 
     @Test
-    fun testPaymentTransactionWithDigits() {
-        val input = "Suresh ne 200 diya"
+    fun testDevanagariCreditTransaction() {
+        val input = "रमेश का 340 उधार"
         val result = LedgerParser.parseStructured(input)
 
         assertTrue(result is ParseResult.Success)
-        val transactions = (result as ParseResult.Success).transactions
-        assertEquals(1, transactions.size)
+        val t = (result as ParseResult.Success).transactions[0]
+        assertEquals("रमेश", t.name)
+        assertEquals(34000L, t.amountPaise)
+        assertEquals(340, t.amount)
+        assertEquals("CREDIT", t.type)
+        assertEquals(0, t.dateOffset)
+    }
 
-        val t = transactions[0]
-        assertEquals("Suresh", t.name)
+    @Test
+    fun testPronounIskaRejectedAsCustomerName() {
+        // "इसका 340 उधार" must NEVER be saved as a customer named "इसका"
+        val inputDevanagari = "इसका 340 उधार"
+        val result1 = LedgerParser.parseStructured(inputDevanagari)
+        assertTrue("Devanagari pronoun 'इसका' must trigger ambiguity prompt", result1 is ParseResult.Ambiguous)
+        val amb1 = result1 as ParseResult.Ambiguous
+        assertTrue(amb1.clarificationQuestion.contains("customer ka naam", ignoreCase = true))
+
+        val inputLatin = "Iska 340 udhaar"
+        val result2 = LedgerParser.parseStructured(inputLatin)
+        assertTrue("Latin pronoun 'Iska' must trigger ambiguity prompt", result2 is ParseResult.Ambiguous)
+    }
+
+    @Test
+    fun testPronounUskaRejectedAsCustomerName() {
+        val input = "Uska 200 jama"
+        val result = LedgerParser.parseStructured(input)
+        assertTrue("Pronoun 'Uska' must trigger ambiguity prompt", result is ParseResult.Ambiguous)
+    }
+
+    @Test
+    fun testDevanagariPaymentTransaction() {
+        val input = "सुरेश ने 200 दिया"
+        val result = LedgerParser.parseStructured(input)
+
+        assertTrue(result is ParseResult.Success)
+        val t = (result as ParseResult.Success).transactions[0]
+        assertEquals("सुरेश", t.name)
         assertEquals(20000L, t.amountPaise)
-        assertEquals(200, t.amount)
         assertEquals("PAYMENT", t.type)
         assertEquals(0, t.dateOffset)
+    }
+
+    @Test
+    fun testDevanagariDigitsNormalization() {
+        val input = "रमेश का ३४० उधार"
+        val result = LedgerParser.parseStructured(input)
+
+        assertTrue(result is ParseResult.Success)
+        val t = (result as ParseResult.Success).transactions[0]
+        assertEquals("रमेश", t.name)
+        assertEquals(34000L, t.amountPaise)
+        assertEquals("CREDIT", t.type)
     }
 
     @Test
@@ -122,7 +164,6 @@ class LedgerParserTest {
 
     @Test
     fun testAmbiguousDirectionNeverDefaultsToCredit() {
-        // Missing direction indicator: must NOT guess or silently default to CREDIT
         val input = "Ramesh 500 rupaye"
         val result = LedgerParser.parseStructured(input)
 

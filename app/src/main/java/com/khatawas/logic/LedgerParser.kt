@@ -1,8 +1,7 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
  * Simplified Technical English (ASD STE-100) compliant.
- * Deterministic natural language financial parser and entity extractor for Kirana voice ledger.
- * Supports multilingual Hindi, Hinglish, English, and Kannada terms.
+ * Deterministic natural language financial parser supporting Devanagari Hindi, Latin Hinglish, and Kannada terms.
  * All monetary amounts are represented as 64-bit integer paise (1 Rupee = 100 Paise).
  */
 
@@ -28,7 +27,6 @@ data class Transaction(
     val type: String, // "CREDIT" or "PAYMENT"
     val dateOffset: Int = 0
 ) {
-    // Backward-compatible rupee integer
     val amount: Int get() = (amountPaise / 100).toInt()
     val amountRupees: Double get() = amountPaise / 100.0
 
@@ -49,46 +47,86 @@ sealed class ParseResult {
 
 /**
  * Deterministic Kirana ledger parser.
- * Distinguishes credit vs payment without guessing, supports multi-clause compound sentences,
- * multi-word Hindi/English numbers, relative dates, and corrections.
+ * Supports both Devanagari script (e.g. "रमेश का 340 उधार") and Latin transliteration ("Ramesh ka 340 udhaar").
+ * Strictly rejects pronouns ("iska", "uska", "इसका", "उसका") as customer names.
  */
 object LedgerParser {
 
-    private val DIGIT_REGEX = Regex("\\b\\d+(?:\\.\\d{1,2})?\\b")
+    private val DIGIT_REGEX = Regex("\\b[\\d\\u0966-\\u096F]+(?:\\.[\\d\\u0966-\\u096F]{1,2})?\\b")
 
-    // Keywords indicating CREDIT (money owed to shopkeeper)
+    // Keywords indicating CREDIT (money owed to shopkeeper) in Latin and Devanagari
     private val CREDIT_KEYWORDS = setOf(
+        // Latin
         "udhaar", "udhar", "baaki", "baki", "credit", "likh", "likho",
-        "samaan", "samaano", "dena", "saala", "kadam", "bakiye"
+        "samaan", "samaano", "dena", "saala", "kadam", "bakiye", "khata",
+        // Devanagari
+        "उधार", "उध़ार", "बाकी", "बाक़ी", "बकाया", "क्रेडिट", "लिख", "लिखो",
+        "सामान", "देना", "खाता", "खाते", "साल"
     )
 
-    // Keywords indicating PAYMENT (money paid to shopkeeper)
+    // Keywords indicating PAYMENT (money paid to shopkeeper) in Latin and Devanagari
     private val PAYMENT_KEYWORDS = setOf(
+        // Latin
         "jama", "diya", "diye", "payment", "paid", "mila", "mile", "aaye",
-        "vasool", "kottidhaare", "pavadhi", "received", "chuka", "chukaye"
+        "vasool", "kottidhaare", "pavadhi", "received", "chuka", "chukaye", "bheja", "bheje",
+        // Devanagari
+        "जमा", "दिया", "दिए", "पेमेंट", "पेड", "मिला", "मिले", "आए", "आये",
+        "वसूल", "चुकाया", "चुकाए", "भेजा", "भेजे", "प्राप्त"
     )
 
-    // Relative date mapping
+    // Relative date mapping in Latin and Devanagari
     private val DATE_MAP = mapOf(
-        "aaj" to 0,
-        "today" to 0,
-        "kal" to -1,
-        "yesterday" to -1,
-        "parso" to -2,
-        "pichhle hafte" to -7,
-        "last week" to -7
+        "aaj" to 0, "today" to 0, "आज" to 0,
+        "kal" to -1, "yesterday" to -1, "कल" to -1,
+        "parso" to -2, "परसों" to -2, "परसो" to -2,
+        "pichhle hafte" to -7, "last week" to -7, "पिछले हफ्ते" to -7, "पिछले सप्ताह" to -7
     )
 
-    // Stopwords and particles that must never be mistaken for customer names
+    // Pronouns and demonstratives that MUST NEVER be accepted as customer names
+    private val PRONOUNS = setOf(
+        // Latin
+        "iska", "isko", "isse", "iski", "iske",
+        "uska", "usko", "usse", "uski", "uske",
+        "inka", "inko", "inse", "unki", "unke",
+        "unka", "unko", "unse",
+        "mera", "meri", "mere", "mujhko", "mujhe",
+        "tera", "teri", "tere", "tujhko", "tujhe",
+        "tumhara", "tumhari", "tumhare",
+        "hamara", "hamari", "hamare",
+        "apna", "apni", "apne",
+        "kiska", "kisko", "kisse",
+        "is", "us", "in", "un", "ye", "wo", "yeh", "voh",
+        // Devanagari
+        "इसका", "इसको", "इससे", "इसकी", "इसके",
+        "उसका", "उसको", "उससे", "उसकी", "उसके",
+        "इनका", "इनको", "इनसे", "इनकी", "इनके",
+        "उनका", "उनको", "उनसे", "उनकी", "उनके",
+        "मेरा", "मेरी", "मेरे", "मुझको", "मुझे",
+        "तेरा", "तेरी", "तेरे", "तुझको", "तुझे",
+        "तुम्हारा", "तुम्हारी", "तुम्hare",
+        "हमारा", "हमारी", "हमारे",
+        "अपना", "अपनी", "अपने",
+        "किसका", "किसको", "किसे",
+        "इस", "उस", "इन", "उन", "यह", "वह", "ये", "वो"
+    )
+
+    // Reserved words, particles, and stopwords
     private val RESERVED_WORDS = setOf(
+        // Latin
         "aaj", "kal", "parso", "today", "yesterday", "rupaye", "rupiya", "rupee", "rupees", "rs",
-        "ka", "ke", "ki", "ko", "ne", "se", "wala", "wali", "tha", "thi", "the", "hai", "hain",
+        "ka", "ke", "ki", "ko", "ne", "se", "me", "mein", "par", "wala", "wali", "tha", "thi", "the", "hai", "hain",
         "udhaar", "udhar", "jama", "diya", "diye", "baaki", "payment", "paid", "bhi", "aur", "and",
-        "nahi", "no", "not", "samaan", "hisaab", "hisab", "kitna", "batao", "saala"
+        "nahi", "no", "not", "samaan", "hisaab", "hisab", "kitna", "batao", "saala",
+        // Devanagari
+        "आज", "कल", "परसों", "परसो", "रुपये", "रुपए", "रुपया",
+        "का", "के", "की", "को", "ने", "से", "में", "पर", "वाला", "वाली", "था", "थी", "थे", "है", "हैं",
+        "उधार", "जमा", "दिया", "दिए", "बाकी", "पेमेंट", "भी", "और",
+        "नहीं", "ना", "सामान", "हिसाब", "कितना", "बताओ", "कुल"
     )
 
-    // Hindi & English number words to base units
+    // Hindi & English number words in Latin and Devanagari
     private val NUMBER_WORDS = mapOf(
+        // Latin
         "zero" to 0L, "shunya" to 0L,
         "ek" to 1L, "one" to 1L,
         "do" to 2L, "two" to 2L,
@@ -122,12 +160,45 @@ object LedgerParser {
         "nabbe" to 90L, "ninety" to 90L,
         "sau" to 100L, "hundred" to 100L,
         "hazaar" to 1000L, "hazar" to 1000L, "thousand" to 1000L,
-        "lakh" to 100000L, "lac" to 100000L
+        "lakh" to 100000L, "lac" to 100000L,
+
+        // Devanagari
+        "शून्य" to 0L,
+        "एक" to 1L,
+        "दो" to 2L,
+        "तीन" to 3L,
+        "चार" to 4L,
+        "पांच" to 5L, "पाँच" to 5L,
+        "छह" to 6L, "छः" to 6L,
+        "सात" to 7L,
+        "आठ" to 8L,
+        "नौ" to 9L,
+        "दस" to 10L,
+        "ग्यारह" to 11L,
+        "बारह" to 12L,
+        "तेरह" to 13L,
+        "चौदह" to 14L,
+        "पंद्रह" to 15L,
+        "सोलह" to 16L,
+        "सत्रह" to 17L,
+        "अट्ठारह" to 18L,
+        "उन्नीस" to 19L,
+        "बीस" to 20L,
+        "पच्चीस" to 25L,
+        "तीस" to 30L,
+        "पैंतीस" to 35L,
+        "चालीस" to 40L,
+        "पैंतालीस" to 45L,
+        "पचास" to 50L,
+        "साठ" to 60L,
+        "सत्तर" to 70L,
+        "अस्सी" to 80L,
+        "नब्बे" to 90L,
+        "सौ" to 100L,
+        "हजार" to 1000L, "हज़ार" to 1000L,
+        "लाख" to 100000L
     )
 
-    /**
-     * Backward-compatible parse function returning first Transaction or null.
-     */
     fun parseUtterance(text: String): Transaction? {
         val structured = parseStructured(text)
         return when (structured) {
@@ -147,17 +218,21 @@ object LedgerParser {
 
         val lower = trimmed.lowercase(Locale.ROOT)
 
-        // 1. Correction detection: "Nahi, 430" / "Nahi chaar sau tees"
-        if (lower.startsWith("nahi") || lower.startsWith("no ") || lower.startsWith("galat")) {
-            val amount = extractAmountPaise(lower)
+        // 1. Correction detection: "Nahi, 430" / "नहीं, 430"
+        if (lower.startsWith("nahi") || lower.startsWith("no ") || lower.startsWith("galat") ||
+            trimmed.startsWith("नहीं") || trimmed.startsWith("गलत")
+        ) {
+            val amount = extractAmountPaise(trimmed)
             if (amount != null && amount > 0L) {
                 return ParseResult.Correction(amount)
             }
             return ParseResult.Ambiguous("Correction without valid amount", "Kitna amount likhna hai?")
         }
 
-        // 2. Query detection: "Ramesh ka hisaab batao" / "kitna baaki hai"
-        if (lower.contains("kitna") || lower.contains("hisaab") || lower.contains("balance") || lower.contains("batao")) {
+        // 2. Query detection: "Ramesh ka hisaab batao" / "रमेश का हिसाब बताओ"
+        if (lower.contains("kitna") || lower.contains("hisaab") || lower.contains("balance") || lower.contains("batao") ||
+            trimmed.contains("कितना") || trimmed.contains("हिसाब") || trimmed.contains("बताओ")
+        ) {
             val customer = extractCustomerName(trimmed)
             if (customer != null) {
                 return ParseResult.Query(customer, "BALANCE")
@@ -165,23 +240,30 @@ object LedgerParser {
         }
 
         // 3. Multi-clause split: handles compound sentences like:
-        // "Ramesh ka 340 udhaar, kal 200 diya tha"
+        // "Ramesh ka 340 udhaar, kal 200 diya tha" or "रमेश का 340 उधार, कल 200 दिया था"
         val clauses = splitClauses(trimmed)
         val defaultCustomer = extractCustomerName(trimmed)
 
         if (defaultCustomer == null) {
-            return ParseResult.Ambiguous("Missing customer name", "Kiska hisaab likhna hai?")
+            // Check if utterance used a pronoun like "iska" / "uska" / "इसका" / "उसका"
+            val tokens = trimmed.split(Regex("[\\s,;]+"))
+            val usedPronoun = tokens.any { PRONOUNS.contains(it.lowercase(Locale.ROOT)) }
+            val question = if (usedPronoun) {
+                "Kiska hisaab hai? Kripya customer ka naam bataiye."
+            } else {
+                "Kiska hisaab likhna hai?"
+            }
+            return ParseResult.Ambiguous("Missing or ambiguous customer name", question)
         }
 
         val parsedTransactions = ArrayList<Transaction>()
 
         for (clause in clauses) {
             val clauseLower = clause.lowercase(Locale.ROOT)
-            val amountPaise = extractAmountPaise(clauseLower) ?: continue
+            val amountPaise = extractAmountPaise(clause) ?: continue
 
-            // Determine direction explicitly — never guess or default to CREDIT
-            val isCredit = CREDIT_KEYWORDS.any { clauseLower.contains(it) }
-            val isPayment = PAYMENT_KEYWORDS.any { clauseLower.contains(it) }
+            val isCredit = CREDIT_KEYWORDS.any { clauseLower.contains(it) || clause.contains(it) }
+            val isPayment = PAYMENT_KEYWORDS.any { clauseLower.contains(it) || clause.contains(it) }
 
             if (!isCredit && !isPayment) {
                 return ParseResult.Ambiguous(
@@ -195,17 +277,19 @@ object LedgerParser {
             } else if (isPayment && !isCredit) {
                 TransactionDirection.PAYMENT
             } else {
-                // Both words present in single clause: evaluate phrasing priority
-                if (clauseLower.indexOf("udhaar") < clauseLower.indexOf("diya") ||
-                    clauseLower.indexOf("baaki") < clauseLower.indexOf("jama")) {
-                    TransactionDirection.CREDIT
-                } else {
-                    TransactionDirection.PAYMENT
-                }
+                // Both words present: prioritize whichever appears first
+                val creditIdx = minOf(
+                    if (clauseLower.indexOf("udhaar") >= 0) clauseLower.indexOf("udhaar") else Int.MAX_VALUE,
+                    if (clause.indexOf("उधार") >= 0) clause.indexOf("उधार") else Int.MAX_VALUE
+                )
+                val paymentIdx = minOf(
+                    if (clauseLower.indexOf("diya") >= 0) clauseLower.indexOf("diya") else Int.MAX_VALUE,
+                    if (clause.indexOf("दिया") >= 0) clause.indexOf("दिया") else Int.MAX_VALUE
+                )
+                if (creditIdx <= paymentIdx) TransactionDirection.CREDIT else TransactionDirection.PAYMENT
             }
 
-            // Extract clause-specific date offset or inherit 0
-            val dateOffset = extractDateOffset(clauseLower)
+            val dateOffset = extractDateOffset(clause)
 
             parsedTransactions.add(
                 Transaction(
@@ -224,42 +308,65 @@ object LedgerParser {
         return ParseResult.Success(parsedTransactions)
     }
 
-    /**
-     * Splits compound sentences on commas, conjunctions ("aur", "and"), or clause boundaries.
-     */
     private fun splitClauses(text: String): List<String> {
-        val delimiters = Regex("[,;]|\\b(?:aur|and|lekin|magar)\\b", RegexOption.IGNORE_CASE)
+        val delimiters = Regex("[,;]|\\b(?:aur|and|lekin|magar|और|लेकिन)\\b", RegexOption.IGNORE_CASE)
         val parts = text.split(delimiters).map { it.trim() }.filter { it.isNotEmpty() }
         return if (parts.isNotEmpty()) parts else listOf(text)
     }
 
     /**
-     * Extract customer name avoiding date words, directions, numbers, and stopwords.
+     * Extract customer name.
+     * Strictly rejects pronouns (iska, uska, इसका, उसका) and reserved stopwords.
+     * Prioritizes words preceding postpositions (ka, ke, ki, ko, ne, se, का, के, की, को, ने, से).
      */
     fun extractCustomerName(text: String): String? {
         val tokens = text.trim().split(Regex("[\\s,;]+"))
-        for (i in tokens.indices) {
-            val token = tokens[i]
-            val lower = token.lowercase(Locale.ROOT)
-            if (RESERVED_WORDS.contains(lower) || NUMBER_WORDS.containsKey(lower) || DIGIT_REGEX.matches(token)) {
-                continue
-            }
-            if (token.length < 2) continue
+        if (tokens.isEmpty()) return null
 
-            // Found valid non-reserved token
-            return token.replaceFirstChar {
-                if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+        val particles = setOf("ka", "ke", "ki", "ko", "ne", "se", "का", "के", "की", "को", "ने", "से")
+
+        // Strategy 1: Look for a token immediately followed by a particle
+        for (i in 0 until tokens.size - 1) {
+            val candidate = tokens[i]
+            val next = tokens[i + 1].lowercase(Locale.ROOT)
+            if (particles.contains(next)) {
+                val candidateLower = candidate.lowercase(Locale.ROOT)
+                if (isValidCustomerCandidate(candidateLower, candidate)) {
+                    return formatCustomerName(candidate)
+                }
             }
         }
+
+        // Strategy 2: First valid non-reserved, non-pronoun, non-numeric token
+        for (token in tokens) {
+            val tokenLower = token.lowercase(Locale.ROOT)
+            if (isValidCustomerCandidate(tokenLower, token)) {
+                return formatCustomerName(token)
+            }
+        }
+
         return null
     }
 
-    /**
-     * Extract date offset from clause tokens.
-     */
-    private fun extractDateOffset(clauseLower: String): Int {
+    private fun isValidCustomerCandidate(lower: String, raw: String): Boolean {
+        if (PRONOUNS.contains(lower) || PRONOUNS.contains(raw)) return false
+        if (RESERVED_WORDS.contains(lower) || RESERVED_WORDS.contains(raw)) return false
+        if (NUMBER_WORDS.containsKey(lower) || NUMBER_WORDS.containsKey(raw)) return false
+        if (DIGIT_REGEX.matches(raw) || DIGIT_REGEX.matches(lower)) return false
+        if (raw.length < 2) return false
+        return true
+    }
+
+    private fun formatCustomerName(name: String): String {
+        return name.replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+        }
+    }
+
+    private fun extractDateOffset(clause: String): Int {
+        val lower = clause.lowercase(Locale.ROOT)
         for ((phrase, offset) in DATE_MAP) {
-            if (clauseLower.contains(phrase)) {
+            if (lower.contains(phrase) || clause.contains(phrase)) {
                 return offset
             }
         }
@@ -267,12 +374,14 @@ object LedgerParser {
     }
 
     /**
-     * Extract monetary amount in integer paise (Long).
-     * 1 Rupee = 100 Paise.
+     * Extract monetary amount in integer paise (Long) from Arabic or Devanagari digits/words.
      */
-    fun extractAmountPaise(clauseLower: String): Long? {
-        // 1. Check numeric digits
-        val digitMatch = DIGIT_REGEX.find(clauseLower)
+    fun extractAmountPaise(clause: String): Long? {
+        val lower = clause.lowercase(Locale.ROOT)
+
+        // 1. Check numeric digits (converting Devanagari digits to standard digits)
+        val normalizedClause = normalizeDigits(lower)
+        val digitMatch = Regex("\\b\\d+(?:\\.\\d{1,2})?\\b").find(normalizedClause)
         if (digitMatch != null) {
             val floatVal = digitMatch.value.toDoubleOrNull()
             if (floatVal != null && floatVal > 0.0) {
@@ -281,13 +390,13 @@ object LedgerParser {
         }
 
         // 2. Parse multi-word Hindi & English number expressions
-        val tokens = clauseLower.split(Regex("[\\s,;]+"))
+        val tokens = clause.split(Regex("[\\s,;]+"))
         var totalRupees = 0L
         var currentChunk = 0L
         var foundNumber = false
 
         for (token in tokens) {
-            val unit = NUMBER_WORDS[token] ?: continue
+            val unit = NUMBER_WORDS[token.lowercase(Locale.ROOT)] ?: NUMBER_WORDS[token] ?: continue
             foundNumber = true
 
             when (unit) {
@@ -314,5 +423,19 @@ object LedgerParser {
 
         totalRupees += currentChunk
         return if (foundNumber && totalRupees > 0L) totalRupees * 100L else null
+    }
+
+    private fun normalizeDigits(input: String): String {
+        val devanagariDigits = "०१२३४५६७८९"
+        val sb = StringBuilder(input.length)
+        for (ch in input) {
+            val idx = devanagariDigits.indexOf(ch)
+            if (idx >= 0) {
+                sb.append(('0' + idx))
+            } else {
+                sb.append(ch)
+            }
+        }
+        return sb.toString()
     }
 }
