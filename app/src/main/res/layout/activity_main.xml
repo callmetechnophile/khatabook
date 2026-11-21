@@ -1,25 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F7FB"
-    android:fillViewport="true">
+    android:background="@color/bg_screen">
 
+    <!-- Top App Bar & System Banners (Always Visible) -->
     <LinearLayout
+        android:id="@+id/ll_top_app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:background="@color/bg_panel"
+        android:elevation="3dp"
         android:orientation="vertical"
-        android:paddingStart="20dp"
-        android:paddingTop="20dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="28dp">
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="10dp">
 
+        <!-- Header Row: Title + Noise Filter Switch -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/iv_brand_logo"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="12dp"
+                android:src="@mipmap/ic_launcher"
+                android:contentDescription="@string/app_name" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -30,18 +43,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="KHATAWAS"
-                    android:textColor="#14213D"
-                    android:textSize="25sp"
+                    android:text="@string/app_name"
+                    android:textColor="@color/text_primary"
+                    android:textSize="@dimen/text_screen_title"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Voice-powered shop ledger"
-                    android:textColor="#64748B"
-                    android:textSize="13sp" />
+                    android:text="@string/app_subtitle"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_caption" />
             </LinearLayout>
 
             <androidx.appcompat.widget.SwitchCompat
@@ -49,131 +61,927 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
-                android:text="Noise filter"
-                android:textColor="#334155"
-                android:textSize="12sp"
-                app:thumbTint="#FFFFFF"
-                app:trackTint="#CBD5E1" />
+                android:text="Filter"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                app:thumbTint="@color/primary_brand"
+                app:trackTint="@color/border_panel" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tv_connection"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:background="#E2E8F0"
-            android:padding="12dp"
-            android:text="●  Ready — press and hold to speak"
-            android:textColor="#334155"
-            android:textSize="13sp"
-            android:textStyle="bold" />
-
+        <!-- Compact Top Banner: Privacy Lock & Cloud Sync -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:background="@drawable/bg_panel"
-            android:elevation="2dp"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="22dp">
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <TextView
+            <!-- Privacy Status Pill -->
+            <LinearLayout
+                android:id="@+id/ll_privacy_banner"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_panel"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="6dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tv_privacy_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔒 PRIVACY LOCKED"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_privacy_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Masked (###XXX)"
+                        android:textColor="@color/text_muted"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btn_auth_action"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:backgroundTint="@color/btn_mic_idle"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="12dp"
+                    android:text="UNLOCK"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_inverse"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <!-- Hidden or compact PIN button for test compatibility -->
+                <Button
+                    android:id="@+id/btn_privacy_config"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="6dp"
+                    android:text="PIN"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Cloud Sync Quick Button -->
+            <LinearLayout
+                android:id="@+id/ll_sync_banner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="TAP AND HOLD TO RECORD"
-                android:textColor="#64748B"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:background="@drawable/bg_panel"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp">
 
-            <Button
-                android:id="@+id/btn_push_to_talk"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="16dp"
-                android:backgroundTint="#2457D6"
-                android:text="HOLD TO SPEAK"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                app:backgroundTint="#2457D6" />
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
 
-            <TextView
-                android:id="@+id/tv_status"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:text="Your recognized speech and saved entry will appear below."
-                android:textColor="#64748B"
-                android:textSize="13sp" />
+                    <TextView
+                        android:id="@+id/tv_sync_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="☁ SURREALDB CLOUD"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tv_sync_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="● Ready"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/pb_sync_progress"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginEnd="4dp"
+                    android:visibility="gone" />
+
+                <ImageButton
+                    android:id="@+id/btn_cloud_sync"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Backup to SurrealDB Cloud"
+                    android:src="@android:drawable/ic_popup_sync"
+                    app:tint="@color/primary_brand" />
+            </LinearLayout>
+
         </LinearLayout>
+    </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="LIVE TRANSCRIPTION"
-            android:textColor="#475569"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tv_transcript"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_panel"
-            android:minHeight="76dp"
-            android:padding="16dp"
-            android:text="Nothing recognized yet. Speak a transaction to see the transcript here."
-            android:textColor="#334155"
-            android:textSize="16sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="LATEST LEDGER ENTRY"
-            android:textColor="#475569"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+    <!-- Main Scrollable Content Area -->
+    <ScrollView
+        android:id="@+id/scroll_main_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/ll_bottom_navigation"
+        android:layout_below="@id/ll_top_app_bar"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_panel"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingHorizontal="16dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="24dp">
 
-            <TextView
-                android:id="@+id/tv_result"
+            <!-- ============================================== -->
+            <!-- TAB 1: HOME DESTINATION -->
+            <!-- ============================================== -->
+            <LinearLayout
+                android:id="@+id/container_tab_home"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="No ledger entry saved yet."
-                android:textColor="#14213D"
-                android:textSize="18sp"
+                android:orientation="vertical"
+                android:visibility="visible">
+
+                <!-- 1. Quick Financial Overview Card -->
+                <LinearLayout
+                    android:id="@+id/card_customer_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_rural_card"
+                    android:elevation="@dimen/card_elevation"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/label_total_outstanding"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_ledger_customer_name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="All Customers"
+                            android:textColor="@color/primary_brand"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Large Primary Outstanding Balance Amount (34sp) -->
+                    <TextView
+                        android:id="@+id/tv_ledger_balance"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:singleLine="true"
+                        android:text="₹0"
+                        android:textColor="@color/btn_credit_bg"
+                        android:textSize="@dimen/text_primary_amount"
+                        android:textStyle="bold"
+                        tools:text="₹24,500" />
+
+                    <!-- Supporting Subtitle (Accessible) -->
+                    <TextView
+                        android:id="@+id/tv_ledger_balance_subtitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Authoritative outstanding balance across all customers."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp" />
+
+                    <!-- Reset Filter Button if customer filtered -->
+                    <Button
+                        android:id="@+id/btn_filter_reset"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        android:text="Show All Customers"
+                        android:textColor="@color/primary_brand"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- 2. TWO DOMINANT 1-TAP PRIMARY FINANCIAL ACTIONS (>= 58dp) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
+
+                    <!-- GIVE UDHAAR (+) (RED) -->
+                    <Button
+                        android:id="@+id/btn_home_give_credit"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_primary_button"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/btn_credit_bg"
+                        android:text="@string/action_give_credit"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_inverse"
+                        android:textSize="@dimen/text_primary_action"
+                        android:textStyle="bold"
+                        app:icon="@drawable/ic_give_credit"
+                        app:iconTint="@color/text_inverse"
+                        app:iconGravity="textStart"
+                        app:cornerRadius="@dimen/button_corner_radius" />
+
+                    <!-- RECEIVE PAYMENT (-) (GREEN) -->
+                    <Button
+                        android:id="@+id/btn_home_receive_payment"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_primary_button"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/btn_debit_bg"
+                        android:text="@string/action_receive_payment"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_inverse"
+                        android:textSize="@dimen/text_primary_action"
+                        android:textStyle="bold"
+                        app:icon="@drawable/ic_got_payment"
+                        app:iconTint="@color/text_inverse"
+                        app:iconGravity="textStart"
+                        app:cornerRadius="@dimen/button_corner_radius" />
+                </LinearLayout>
+
+                <!-- 3. PROMINENT VOICE ACTION & REAL-TIME AUDIO CARD -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_rural_card"
+                    android:elevation="@dimen/card_elevation"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tv_connection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_panel"
+                        android:padding="10dp"
+                        android:text="●  Ready — hold button to speak"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <!-- Large Voice Push-to-Talk Button (64dp) -->
+                    <Button
+                        android:id="@+id/btn_push_to_talk"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="12dp"
+                        android:backgroundTint="@color/btn_mic_idle"
+                        android:text="@string/action_hold_to_speak"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_inverse"
+                        android:textSize="19sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="@dimen/button_corner_radius" />
+
+                    <TextView
+                        android:id="@+id/tv_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:text="Your recognized speech and saved entry will appear below."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp" />
+
+                    <!-- Live Transcription Bubble -->
+                    <TextView
+                        android:id="@+id/tv_transcript"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_panel"
+                        android:minHeight="54dp"
+                        android:padding="12dp"
+                        android:text="Nothing recognized yet. Hold button to speak a transaction."
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <!-- Confirmed Ledger Entry Feedback -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_panel"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:id="@+id/tv_result"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="No ledger entry saved yet."
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_result_detail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="A confirmed entry will appear here."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 4. RECENT TRANSACTIONS HEADER & PREVIEW -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tv_ledger_header"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/label_recent_transactions"
+                        android:textColor="@color/text_primary"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/btn_home_view_all_history"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="6dp"
+                        android:text="@string/label_view_all"
+                        android:textColor="@color/primary_brand"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Empty State View -->
+                <LinearLayout
+                    android:id="@+id/ll_empty_state"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_rural_card"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/empty_transactions_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="@string/empty_transactions_sub"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <!-- Transaction RecyclerView -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_transactions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:nestedScrollingEnabled="false"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+            <!-- ============================================== -->
+            <!-- TAB 2: CUSTOMERS DESTINATION -->
+            <!-- ============================================== -->
+            <LinearLayout
+                android:id="@+id/container_tab_customers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Customer Khata Directory"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <!-- Search Input -->
+                <EditText
+                    android:id="@+id/et_customer_search"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_panel"
+                    android:drawableStart="@android:drawable/ic_menu_search"
+                    android:drawablePadding="10dp"
+                    android:hint="@string/search_customer_hint"
+                    android:inputType="text"
+                    android:paddingHorizontal="14dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
+
+                <!-- Add Customer Button -->
+                <Button
+                    android:id="@+id/btn_add_customer_screen"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target_secondary_button"
+                    android:layout_marginTop="12dp"
+                    android:backgroundTint="@color/primary_brand"
+                    android:text="@string/btn_add_customer"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_inverse"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- Customer List RecyclerView -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_customer_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:nestedScrollingEnabled="false" />
+
+            </LinearLayout>
+
+            <!-- ============================================== -->
+            <!-- TAB 3: HISTORY DESTINATION -->
+            <!-- ============================================== -->
+            <LinearLayout
+                android:id="@+id/container_tab_history"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="All Transactions"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <!-- Filter Chips -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/chip_filter_all"
+                            style="@style/Widget.MaterialComponents.Button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="6dp"
+                            android:backgroundTint="@color/primary_brand"
+                            android:text="@string/filter_all"
+                            android:textColor="@color/text_inverse"
+                            android:textSize="13sp" />
+
+                        <Button
+                            android:id="@+id/chip_filter_credit"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="6dp"
+                            android:text="@string/filter_credit"
+                            android:textColor="@color/badge_credit_text"
+                            android:textSize="13sp" />
+
+                        <Button
+                            android:id="@+id/chip_filter_debit"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="6dp"
+                            android:text="@string/filter_debit"
+                            android:textColor="@color/badge_debit_text"
+                            android:textSize="13sp" />
+
+                        <Button
+                            android:id="@+id/chip_filter_stuck"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="6dp"
+                            android:text="@string/filter_stuck"
+                            android:textColor="@color/badge_stuck_text"
+                            android:textSize="13sp" />
+
+                        <Button
+                            android:id="@+id/chip_filter_illegal"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:text="@string/filter_illegal"
+                            android:textColor="@color/badge_illegal_text"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <!-- History List -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_history_tab_transactions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:nestedScrollingEnabled="false" />
+            </LinearLayout>
+
+            <!-- ============================================== -->
+            <!-- TAB 4: ASSISTANT DESTINATION -->
+            <!-- ============================================== -->
+            <LinearLayout
+                android:id="@+id/container_tab_assistant"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ledger Voice Assistant"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Ask questions in Hindi, Kannada, or English about your store's udhaar and payments."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp" />
+
+                <!-- AI Chatbot & Voice Assistant Action Button -->
+                <Button
+                    android:id="@+id/btn_open_chatbot"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="16dp"
+                    android:backgroundTint="@color/primary_brand"
+                    android:drawableStart="@android:drawable/ic_menu_help"
+                    android:drawablePadding="10dp"
+                    android:gravity="center"
+                    android:text="OPEN CHAT &amp; VOICE ASSISTANT"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_inverse"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- Quick Prompts Card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_rural_card"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sample questions you can ask:"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="• 'रमेश का कितना उधार बाकी है?'"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="• 'आज कुल कितना पेमेंट मिला?'"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="• 'सबसे ज्यादा उधार किसके पास है?'"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ============================================== -->
+            <!-- TAB 5: SETTINGS DESTINATION -->
+            <!-- ============================================== -->
+            <LinearLayout
+                android:id="@+id/container_tab_settings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_language"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <!-- Language Selector Buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_lang_en"
+                        style="@style/Widget.MaterialComponents.Button"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:text="English"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btn_lang_hi"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_marginHorizontal="4dp"
+                        android:layout_weight="1"
+                        android:text="हिंदी"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btn_lang_kn"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:text="ಕನ್ನಡ"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="Privacy &amp; Security"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <!-- AI Disclosure & Purge Buttons -->
+                <Button
+                    android:id="@+id/btn_ai_disclosure"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/settings_ai_disclosure"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/btn_purge_data"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/settings_clear_data"
+                    android:textAllCaps="false"
+                    android:textColor="@color/btn_debit_bg"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ============================================== -->
+    <!-- BOTTOM NAVIGATION BAR (Height 64dp, Touch Target >= 48dp) -->
+    <!-- ============================================== -->
+    <LinearLayout
+        android:id="@+id/ll_bottom_navigation"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/bottom_nav_height"
+        android:layout_alignParentBottom="true"
+        android:background="@color/bg_panel"
+        android:elevation="8dp"
+        android:orientation="horizontal">
+
+        <!-- 1. Home Tab -->
+        <LinearLayout
+            android:id="@+id/nav_tab_home"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_nav_home"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="@string/nav_home"
+                android:src="@drawable/ic_nav_home"
+                app:tint="@color/primary_brand" />
+
+            <TextView
+                android:id="@+id/tv_nav_home"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/nav_home"
+                android:textColor="@color/primary_brand"
+                android:textSize="12sp"
                 android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_result_detail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="A confirmed entry will be displayed here."
-                android:textColor="#64748B"
-                android:textSize="13sp" />
         </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:text="Demo: “Ramesh ka 340 udhaar”"
-            android:textColor="#64748B"
-            android:textSize="12sp" />
+        <!-- 2. Customers Tab -->
+        <LinearLayout
+            android:id="@+id/nav_tab_customers"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_nav_customers"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="@string/nav_customers"
+                android:src="@drawable/ic_nav_customers"
+                app:tint="@color/nav_inactive_item" />
+
+            <TextView
+                android:id="@+id/tv_nav_customers"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/nav_customers"
+                android:textColor="@color/nav_inactive_item"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- 3. History Tab -->
+        <LinearLayout
+            android:id="@+id/nav_tab_history"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_nav_history"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="@string/nav_history"
+                android:src="@drawable/ic_nav_history"
+                app:tint="@color/nav_inactive_item" />
+
+            <TextView
+                android:id="@+id/tv_nav_history"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/nav_history"
+                android:textColor="@color/nav_inactive_item"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- 4. Assistant Tab -->
+        <LinearLayout
+            android:id="@+id/nav_tab_assistant"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_nav_assistant"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="@string/nav_assistant"
+                android:src="@drawable/ic_nav_assistant"
+                app:tint="@color/nav_inactive_item" />
+
+            <TextView
+                android:id="@+id/tv_nav_assistant"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/nav_assistant"
+                android:textColor="@color/nav_inactive_item"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- 5. Settings Tab -->
+        <LinearLayout
+            android:id="@+id/nav_tab_settings"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_nav_settings"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="@string/nav_settings"
+                android:src="@drawable/ic_nav_settings"
+                app:tint="@color/nav_inactive_item" />
+
+            <TextView
+                android:id="@+id/tv_nav_settings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/nav_settings"
+                android:textColor="@color/nav_inactive_item"
+                android:textSize="12sp" />
+        </LinearLayout>
 
     </LinearLayout>
-</ScrollView>
+
+</RelativeLayout>

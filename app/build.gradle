@@ -18,14 +18,14 @@ android {
         applicationId "com.khatawas"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode (project.findProperty("versionCode")?.toInteger() ?: 1)
+        versionName (project.findProperty("versionName") ?: "1.0")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // Restrict builds to physical ARM devices to maximize compile and execution performance
+        // Support ARM physical devices and x86_64 Android Studio emulators
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a'
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
         }
 
         externalNativeBuild {
@@ -38,7 +38,7 @@ android {
         String apiKey = properties.getProperty("GNANI_API_KEY") ?: project.findProperty("GNANI_API_KEY") ?: ""
         buildConfigField "String", "GNANI_API_KEY", "\"${apiKey}\""
 
-        String sttUrl = properties.getProperty("GNANI_STT_WS_URL") ?: project.findProperty("GNANI_STT_WS_URL") ?: "wss://asr.gnani.ai/stt/v3/stream"
+        String sttUrl = properties.getProperty("GNANI_STT_WS_URL") ?: project.findProperty("GNANI_STT_WS_URL") ?: "wss://api.vachana.ai/stt/v3/stream"
         buildConfigField "String", "GNANI_STT_WS_URL", "\"${sttUrl}\""
 
         String ttsUrl = properties.getProperty("GNANI_TTS_WS_URL") ?: project.findProperty("GNANI_TTS_WS_URL") ?: "wss://asr.gnani.ai/api/v1/tts"
@@ -49,10 +49,35 @@ android {
         buildConfig true
     }
 
+    signingConfigs {
+        release {
+            String ksFile = System.getenv("KEYSTORE_FILE") ?: (project.findProperty("KEYSTORE_FILE") ?: "")
+            String ksPass = System.getenv("KEYSTORE_PASSWORD") ?: (project.findProperty("KEYSTORE_PASSWORD") ?: "")
+            String kAlias = System.getenv("KEY_ALIAS") ?: (project.findProperty("KEY_ALIAS") ?: "")
+            String kPass = System.getenv("KEY_PASSWORD") ?: (project.findProperty("KEY_PASSWORD") ?: "")
+
+            if (ksFile && file(ksFile).exists() && ksPass && kAlias && kPass) {
+                storeFile file(ksFile)
+                storePassword ksPass
+                keyAlias kAlias
+                keyPassword kPass
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (signingConfigs.release.storeFile != null) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
         }
     }
 
@@ -73,6 +98,46 @@ android {
     }
 }
 
+task buildRustNative {
+    description = "Compiles khatawas_android for all active Android ABIs via Cargo and copies to jniLibs"
+    onlyIf {
+        boolean forceRebuild = project.hasProperty("buildRustNative") && project.property("buildRustNative") == "true"
+        boolean missingLibs = !file("${project.projectDir}/src/main/jniLibs/arm64-v8a/libkhatawas_android.so").exists() ||
+                              !file("${project.projectDir}/src/main/jniLibs/armeabi-v7a/libkhatawas_android.so").exists() ||
+                              !file("${project.projectDir}/src/main/jniLibs/x86_64/libkhatawas_android.so").exists()
+        return forceRebuild || missingLibs
+    }
+    doLast {
+        def isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows()
+        def cargoCmd = isWindows ? "cargo.exe" : "cargo"
+        def abiMap = [
+            'arm64-v8a': 'aarch64-linux-android',
+            'armeabi-v7a': 'armv7-linux-androideabi',
+            'x86_64': 'x86_64-linux-android'
+        ]
+        abiMap.each { abi, target ->
+            def pb = new ProcessBuilder(cargoCmd, "build", "--workspace", "--target", target, "--release")
+            pb.directory(file("${project.rootDir}/rust-engine"))
+            pb.inheritIO()
+            def proc = pb.start()
+            def exitCode = proc.waitFor()
+            if (exitCode != 0) {
+                throw new GradleException("Cargo build failed for target ${target} with exit code ${exitCode}")
+            }
+
+            def srcSo = file("${project.rootDir}/rust-engine/target/${target}/release/libkhatawas_android.so")
+            def destDir = file("${project.projectDir}/src/main/jniLibs/${abi}")
+            destDir.mkdirs()
+            copy {
+                from srcSo
+                into destDir
+            }
+        }
+    }
+}
+
+preBuild.dependsOn buildRustNative
+
 dependencies {
     // Kotlin standard library & Android Core
     implementation "androidx.core:core-ktx:1.12.0"
@@ -89,6 +154,16 @@ dependencies {
     // AndroidX Security for Keystore and EncryptedSharedPreferences key generation
     implementation "androidx.security:security-crypto:1.1.0-alpha06"
 
+    // AndroidX Biometric for Fingerprint, Face, and Device Credential Authentication
+    implementation "androidx.biometric:biometric:1.1.0"
+
+    // Microsoft ONNX Runtime Android for edge AI model inference
+    implementation "com.microsoft.onnxruntime:onnxruntime-android:1.17.0"
+
     // Local unit tests
     testImplementation "junit:junit:4.13.2"
+
+    // Android Studio instrumented tests
+    androidTestImplementation "androidx.test:runner:1.5.2"
+    androidTestImplementation "androidx.test.ext:junit:1.1.5"
 }

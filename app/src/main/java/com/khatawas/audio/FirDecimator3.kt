@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
- * Stateful 48 kHz to 16 kHz FIR decimator.
+ * Stateful 48 kHz to 16 kHz FIR decimator in Kotlin (Reference Implementation).
  */
 
 package com.khatawas.audio
@@ -11,12 +11,12 @@ package com.khatawas.audio
  * The cutoff is 7.2 kHz (0.15 cycles/input sample), below the 8 kHz
  * Nyquist limit of the 16 kHz output. Filter history is retained across calls.
  *
- * This implementation is deliberately small and allocation-free in process().
+ * Reference implementation in pure Kotlin.
  */
-internal class FirDecimator3 {
+class FirDecimator3 : IFirDecimator {
 
     companion object {
-        private val COEFFICIENTS = doubleArrayOf(
+        val COEFFICIENTS = doubleArrayOf(
             0.001694864290, 0.001201491530, -0.000904732020, -0.004227545336,
             -0.005427042574, 0.0, 0.011365095290, 0.018584217910,
             0.008250100127, -0.021236460303, -0.048939206360, -0.039590259461,
@@ -26,20 +26,27 @@ internal class FirDecimator3 {
             0.011365095290, 0.0, -0.005427042574, -0.004227545336,
             -0.000904732020, 0.001201491530, 0.001694864290
         )
-        private const val TAPS = 31
-        private const val DECIMATION = 3
+        const val TAPS = 31
+        const val DECIMATION = 3
     }
 
     private val history = DoubleArray(TAPS)
     private var writeIndex = 0
     private var inputSampleCount = 0L
 
+    override fun reset() {
+        history.fill(0.0)
+        writeIndex = 0
+        inputSampleCount = 0L
+    }
+
     /**
      * Process input samples and write decimated samples to output.
      * For input sizes divisible by three, output size is input.size / 3.
      * The output array must have enough capacity.
      */
-    fun process(input: FloatArray, output: FloatArray): Int {
+    override fun process(input: FloatArray, output: FloatArray): Int {
+        if (input.isEmpty()) return 0
         require(output.size >= (input.size + DECIMATION - 1) / DECIMATION) {
             "Output buffer is too small"
         }
