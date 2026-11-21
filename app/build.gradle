@@ -18,8 +18,8 @@ android {
         applicationId "com.khatawas"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode (project.findProperty("versionCode")?.toInteger() ?: 1)
+        versionName (project.findProperty("versionName") ?: "0.1.0")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -49,10 +49,29 @@ android {
         buildConfig true
     }
 
+    signingConfigs {
+        release {
+            String ksFile = System.getenv("KEYSTORE_FILE") ?: (project.findProperty("KEYSTORE_FILE") ?: "")
+            String ksPass = System.getenv("KEYSTORE_PASSWORD") ?: (project.findProperty("KEYSTORE_PASSWORD") ?: "")
+            String kAlias = System.getenv("KEY_ALIAS") ?: (project.findProperty("KEY_ALIAS") ?: "")
+            String kPass = System.getenv("KEY_PASSWORD") ?: (project.findProperty("KEY_PASSWORD") ?: "")
+
+            if (ksFile && file(ksFile).exists() && ksPass && kAlias && kPass) {
+                storeFile file(ksFile)
+                storePassword ksPass
+                keyAlias kAlias
+                keyPassword kPass
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (signingConfigs.release.storeFile != null) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
@@ -81,6 +100,13 @@ android {
 
 task buildRustNative {
     description = "Compiles khatawas_android for all active Android ABIs via Cargo and copies to jniLibs"
+    onlyIf {
+        boolean forceRebuild = project.hasProperty("buildRustNative") && project.property("buildRustNative") == "true"
+        boolean missingLibs = !file("${project.projectDir}/src/main/jniLibs/arm64-v8a/libkhatawas_android.so").exists() ||
+                              !file("${project.projectDir}/src/main/jniLibs/armeabi-v7a/libkhatawas_android.so").exists() ||
+                              !file("${project.projectDir}/src/main/jniLibs/x86_64/libkhatawas_android.so").exists()
+        return forceRebuild || missingLibs
+    }
     doLast {
         def isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows()
         def cargoCmd = isWindows ? "cargo.exe" : "cargo"

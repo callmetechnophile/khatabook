@@ -13,4 +13,21 @@
 # Rust build artifacts
 target/
 rust-engine/target/
-/app/src/main/jniLibs/
+
+# Keystores & Signing Secrets
+*.jks
+*.keystore
+*.p12
+*.key
+signing.properties
+
+# Environment & Credentials
+.env
+.env.*
+!.env.example
+*.pem
+
+# APK and distribution build artifacts
+*.apk
+*.aab
+/release/
