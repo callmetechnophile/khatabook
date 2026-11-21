@@ -137,17 +137,22 @@ class AudioPipeline(private val rnnoiseProcessor: RnnoiseProcessor) {
         val resampler = FirDecimator3()
 
         while (isRecording && audioRecord === record) {
-            val shortsRead = record.read(rawShorts, 0, FRAME_SIZE_480, AudioRecord.READ_BLOCKING)
-            if (shortsRead < 0) {
-                if (isRecording) Log.e(TAG, "AudioRecord read failed: $shortsRead")
-                break
+            var samplesRead = 0
+            while (isRecording && samplesRead < FRAME_SIZE_480) {
+                val count = record.read(
+                    rawShorts,
+                    samplesRead,
+                    FRAME_SIZE_480 - samplesRead,
+                    AudioRecord.READ_BLOCKING
+                )
+                if (count < 0) {
+                    if (isRecording) Log.e(TAG, "AudioRecord read failed: $count")
+                    return
+                }
+                if (count == 0) continue
+                samplesRead += count
             }
-            if (shortsRead == 0) continue
-            if (shortsRead != FRAME_SIZE_480) {
-                // Do not process a partial frame. The next read fills a fresh frame.
-                Log.w(TAG, "Partial audio frame received: $shortsRead samples")
-                continue
-            }
+            if (samplesRead != FRAME_SIZE_480) break
 
             for (i in 0 until FRAME_SIZE_480) {
                 inFloats[i] = rawShorts[i].toFloat()
