@@ -14,6 +14,7 @@ import com.khatawas.audio.RnnoiseProcessor
 import com.khatawas.audio.VoiceFeedback
 import com.khatawas.db.LedgerDatabase
 import com.khatawas.logic.LedgerParser
+import com.khatawas.logic.Transaction
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -34,6 +35,9 @@ class AppOrchestrator(context: Context) {
     val ledgerDatabase: LedgerDatabase = LedgerDatabase(context)
     val voiceFeedback: VoiceFeedback = VoiceFeedback(context)
 
+    // Callback invoked on the main thread when a transaction is saved
+    var onTransactionSaved: ((Transaction) -> Unit)? = null
+
     // Dedicated single-thread executor for all encrypted SQLite operations
     private val dbExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
@@ -44,14 +48,28 @@ class AppOrchestrator(context: Context) {
     private val audioOutputBuffer = FloatArray(RnnoiseProcessor.FRAME_SIZE)
 
     /**
-     * Process an incoming speech utterance string.
-     * Step 1: Parse the utterance using Kotlin Regex and FSM dictionary.
-     * Step 2: Submit the transaction insert to the single-thread DB executor.
-     * Step 3: On insert success, post runnable to main thread handler to trigger TTS confirmation.
-     *
+     * Process real transaction text from live speech recognition.
+     * Parameter text: Speech recognition transcript to process.
+     */
+    fun processRealTransaction(text: String) {
+        processTransactionInternal(text)
+    }
+
+    /**
+     * Process mock transaction text for test verification.
      * Parameter text: Speech recognition transcript to process.
      */
     fun processMockTransaction(text: String) {
+        processTransactionInternal(text)
+    }
+
+    /**
+     * Internal processor for utterance strings.
+     * Step 1: Parse the utterance using Kotlin Regex and FSM dictionary.
+     * Step 2: Submit the transaction insert to the single-thread DB executor.
+     * Step 3: On insert success, post runnable to main thread handler to trigger TTS confirmation and UI update.
+     */
+    private fun processTransactionInternal(text: String) {
         // [STEP: PARSING]
         Log.d(TAG, "[PARSER] Starting deterministic parse for utterance: \"$text\"")
         val transaction = LedgerParser.parseUtterance(text)
@@ -76,10 +94,11 @@ class AppOrchestrator(context: Context) {
                 if (rowId > 0L) {
                     Log.i(TAG, "[DATABASE] Transaction successfully inserted. Row ID: $rowId")
 
-                    // [STEP: TTS TRIGGER]
+                    // [STEP: TTS TRIGGER & UI UPDATE]
                     mainHandler.post {
                         Log.d(TAG, "[TTS] Posting confirmation to main thread for customer: ${transaction.name}")
                         voiceFeedback.speakConfirmation(transaction)
+                        onTransactionSaved?.invoke(transaction)
                     }
                 } else {
                     Log.e(TAG, "[DATABASE] Insert failed. Database returned row ID: $rowId")
