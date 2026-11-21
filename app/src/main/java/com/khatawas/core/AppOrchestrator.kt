@@ -12,6 +12,7 @@ import android.os.Looper
 import android.util.Log
 import com.khatawas.audio.RnnoiseProcessor
 import com.khatawas.audio.VoiceFeedback
+import com.khatawas.ai.ShadowModePipeline
 import com.khatawas.db.LedgerDatabase
 import com.khatawas.logic.LedgerParser
 import com.khatawas.logic.ParseResult
@@ -35,6 +36,7 @@ class AppOrchestrator(context: Context) {
     val rnnoiseProcessor: RnnoiseProcessor = RnnoiseProcessor()
     val ledgerDatabase: LedgerDatabase = LedgerDatabase(context)
     val voiceFeedback: VoiceFeedback = VoiceFeedback(context)
+    val shadowPipeline: ShadowModePipeline = ShadowModePipeline.create(context)
 
     // Callback invoked on the main thread when a transaction is saved
     var onTransactionSaved: ((Transaction) -> Unit)? = null
@@ -70,8 +72,9 @@ class AppOrchestrator(context: Context) {
      * Evaluates structured parse results: success, ambiguity, queries, or corrections.
      */
     private fun processTransactionInternal(text: String) {
-        val parseResult = LedgerParser.parseStructured(text)
-        Log.i(TAG, "Parser structured result: $parseResult")
+        val shadowEval = shadowPipeline.process(text)
+        val parseResult = shadowEval.deterministicResult
+        Log.i(TAG, "Parser structured result: $parseResult (Shadow agreement: cat=${shadowEval.agreesOnCategory}, clar=${shadowEval.agreesOnClarification})")
 
         when (parseResult) {
             is ParseResult.Success -> {

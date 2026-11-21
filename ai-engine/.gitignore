@@ -1,0 +1,6 @@
+.venv/
+*.whl
+__pycache__/
+*.pyc
+checkpoints/
+exports/*.onnx

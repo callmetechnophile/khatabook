@@ -131,6 +131,9 @@ dependencies {
     // AndroidX Biometric for Fingerprint, Face, and Device Credential Authentication
     implementation "androidx.biometric:biometric:1.1.0"
 
+    // Microsoft ONNX Runtime Android for edge AI model inference
+    implementation "com.microsoft.onnxruntime:onnxruntime-android:1.17.0"
+
     // Local unit tests
     testImplementation "junit:junit:4.13.2"
 
