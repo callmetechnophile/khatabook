@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:orientation="vertical">
+
+    <!-- USER MESSAGE BUBBLE (Right aligned) -->
+    <LinearLayout
+        android:id="@+id/ll_user_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginStart="48dp"
+        android:background="@drawable/bg_panel"
+        android:backgroundTint="#2563EB"
+        android:elevation="1dp"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/tv_user_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            tools:text="What is Ravi's balance?" />
+
+        <TextView
+            android:id="@+id/tv_user_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="4dp"
+            android:textColor="#BFDBFE"
+            android:textSize="11sp"
+            tools:text="10:45 AM" />
+    </LinearLayout>
+
+    <!-- ASSISTANT MESSAGE BUBBLE (Left aligned) -->
+    <LinearLayout
+        android:id="@+id/ll_assistant_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:layout_marginEnd="48dp"
+        android:background="@drawable/bg_panel"
+        android:elevation="1dp"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <!-- Assistant Header with Tag and Replay Button -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="KHATAWAS ASSISTANT"
+                android:textColor="@color/badge_credit_text"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_assistant_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/text_muted"
+                android:textSize="11sp"
+                tools:text="10:45 AM" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_assistant_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:lineSpacingExtra="3dp"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            tools:text="Ravi currently owes ₹1,250 based on recorded transactions." />
+
+        <!-- Grounded Source Indicator Badge -->
+        <TextView
+            android:id="@+id/tv_source_indicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#F1F5F9"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:textStyle="italic"
+            tools:text="Based on local and cloud ledger data." />
+    </LinearLayout>
+
+</LinearLayout>

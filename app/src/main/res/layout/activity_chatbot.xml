@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_screen"
+    android:orientation="vertical">
+
+    <!-- Top Action Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/bg_panel"
+        android:elevation="2dp"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Back"
+            android:src="@android:drawable/ic_menu_revert" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ledger Assistant"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_privacy_tag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Private • Database-Grounded"
+                android:textColor="@color/badge_credit_text"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btn_clear_chat"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Clear conversation"
+            android:src="@android:drawable/ic_menu_delete" />
+    </LinearLayout>
+
+    <!-- Gnani Audio Privacy Disclosure Banner -->
+    <LinearLayout
+        android:id="@+id/ll_audio_consent_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FEF3C7"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Voice Processing Privacy Disclosure:"
+            android:textColor="#92400E"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Speech uses Gnani AI. Audio is securely sent to api.vachana.ai and asr.gnani.ai to answer your ledger queries. No financial transactions are committed without your review."
+            android:textColor="#B45309"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btn_accept_audio_consent"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_gravity="end"
+            android:layout_marginTop="6dp"
+            android:backgroundTint="#D97706"
+            android:text="I Understand &amp; Consent"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Privacy Masked Banner (When App is Locked) -->
+    <LinearLayout
+        android:id="@+id/ll_locked_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FEE2E2"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Display Locked: Sensitive financial amounts are masked with ###XXX."
+            android:textColor="#991B1B"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btn_unlock_chat"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:backgroundTint="#DC2626"
+            android:text="Unlock"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Chat Messages List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_chat_messages"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="12dp" />
+
+    <!-- Live Speech Transcript Preview Strip -->
+    <LinearLayout
+        android:id="@+id/ll_speech_preview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#EFF6FF"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ProgressBar
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center_vertical" />
+
+        <TextView
+            android:id="@+id/tv_speech_preview_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="Listening..."
+            android:textColor="#1D4ED8"
+            android:textSize="13sp" />
+
+        <ImageButton
+            android:id="@+id/btn_cancel_speech"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel" />
+    </LinearLayout>
+
+    <!-- Bottom Input Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/bg_panel"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <ImageButton
+            android:id="@+id/btn_mic"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_panel"
+            android:backgroundTint="#F1F5F9"
+            android:contentDescription="Voice Input"
+            android:src="@android:drawable/ic_btn_speak_now" />
+
+        <EditText
+            android:id="@+id/et_query_input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="8dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_panel"
+            android:backgroundTint="#F8FAFC"
+            android:hint="Ask about balances, customers, or history..."
+            android:maxLines="3"
+            android:padding="10dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_muted"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/btn_send"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:backgroundTint="#2563EB"
+            android:text="Send"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+
+</LinearLayout>

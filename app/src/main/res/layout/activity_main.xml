@@ -193,6 +193,23 @@
                 app:tint="#2457D6" />
         </LinearLayout>
 
+        <!-- AI Chatbot & Voice Assistant Action Button -->
+        <Button
+            android:id="@+id/btn_open_chatbot"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#059669"
+            android:drawableStart="@android:drawable/ic_menu_help"
+            android:drawablePadding="8dp"
+            android:gravity="center"
+            android:text="ASK LEDGER ASSISTANT (Chat &amp; Voice)"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:backgroundTint="#059669" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

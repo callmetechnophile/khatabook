@@ -78,6 +78,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvSyncSubtitle: TextView
     private lateinit var btnCloudSync: ImageButton
     private lateinit var pbSyncProgress: ProgressBar
+    private lateinit var btnOpenChatbot: Button
     private lateinit var tvTranscript: TextView
     private lateinit var tvResult: TextView
     private lateinit var tvResultDetail: TextView
@@ -155,6 +156,10 @@ class MainActivity : AppCompatActivity() {
         tvSyncSubtitle = findViewById(R.id.tv_sync_subtitle)
         btnCloudSync = findViewById(R.id.btn_cloud_sync)
         pbSyncProgress = findViewById(R.id.pb_sync_progress)
+        btnOpenChatbot = findViewById(R.id.btn_open_chatbot)
+        btnOpenChatbot.setOnClickListener {
+            startActivity(android.content.Intent(this, com.khatawas.ui.ChatbotActivity::class.java))
+        }
         tvTranscript = findViewById(R.id.tv_transcript)
         tvResult = findViewById(R.id.tv_result)
         tvResultDetail = findViewById(R.id.tv_result_detail)

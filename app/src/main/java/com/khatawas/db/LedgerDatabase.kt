@@ -47,6 +47,22 @@ data class TransactionEntity(
 )
 
 /**
+ * Encrypted chat conversation record.
+ */
+data class ChatMessageEntity(
+    val id: Long = 0,
+    val conversationId: String,
+    val messageId: String,
+    val role: String, // 'user', 'assistant', 'system'
+    val content: String,
+    val modality: String, // 'TEXT' or 'AUDIO'
+    val timestamp: Long,
+    val sourceMetadata: String = "",
+    val retrievedEventIds: String = "",
+    val isConflict: Boolean = false
+)
+
+/**
  * Encrypted ledger database using SQLCipher.
  * Stores Kirana customer records, ledger transactions with AES-256 encryption,
  * SHA-256 cryptographic event hashing and hash-chaining,
@@ -62,11 +78,12 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
     companion object {
         private const val TAG = "KHATAWAS_DB"
         const val DATABASE_NAME = "khatawas.db"
-        const val DATABASE_VERSION = 4
+        const val DATABASE_VERSION = 5
 
         const val TABLE_CUSTOMERS = "customers"
         const val TABLE_TRANSACTIONS = "transactions"
         const val TABLE_SYNC_QUEUE = "sync_queue"
+        const val TABLE_CONVERSATIONS = "conversation_history"
 
         const val COLUMN_ID = "id"
         const val COLUMN_NAME = "name"
@@ -91,6 +108,17 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
         const val COLUMN_RETRY_COUNT = "retry_count"
         const val COLUMN_LAST_ATTEMPT_AT = "last_attempt_at"
         const val COLUMN_ERROR_MESSAGE = "error_message"
+
+        // Conversation history columns
+        const val COLUMN_CONV_ID = "conversation_id"
+        const val COLUMN_MESSAGE_ID = "message_id"
+        const val COLUMN_ROLE = "role"
+        const val COLUMN_CONTENT = "content"
+        const val COLUMN_MODALITY = "modality"
+        const val COLUMN_CONV_TIMESTAMP = "timestamp"
+        const val COLUMN_SOURCE_METADATA = "source_metadata"
+        const val COLUMN_RETRIEVED_EVENT_IDS = "retrieved_event_ids"
+        const val COLUMN_IS_CONFLICT = "is_conflict"
 
         private const val MILLIS_PER_DAY = 86_400_000L
     }
@@ -187,6 +215,26 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_transaction_customer ON $TABLE_TRANSACTIONS($COLUMN_CUSTOMER_ID);")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_sync_queue_status ON $TABLE_SYNC_QUEUE($COLUMN_STATUS);")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_tx_event_hash ON $TABLE_TRANSACTIONS($COLUMN_EVENT_HASH);")
+
+        // Table 4: conversation_history for chatbot persistence
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS $TABLE_CONVERSATIONS (
+                $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                $COLUMN_CONV_ID TEXT NOT NULL,
+                $COLUMN_MESSAGE_ID TEXT UNIQUE NOT NULL,
+                $COLUMN_ROLE TEXT NOT NULL CHECK($COLUMN_ROLE IN ('user', 'assistant', 'system')),
+                $COLUMN_CONTENT TEXT NOT NULL,
+                $COLUMN_MODALITY TEXT NOT NULL CHECK($COLUMN_MODALITY IN ('TEXT', 'AUDIO')),
+                $COLUMN_CONV_TIMESTAMP INTEGER NOT NULL,
+                $COLUMN_SOURCE_METADATA TEXT DEFAULT '',
+                $COLUMN_RETRIEVED_EVENT_IDS TEXT DEFAULT '',
+                $COLUMN_IS_CONFLICT INTEGER DEFAULT 0
+            );
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_conv_id ON $TABLE_CONVERSATIONS($COLUMN_CONV_ID);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_conv_timestamp ON $TABLE_CONVERSATIONS($COLUMN_CONV_TIMESTAMP);")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -311,6 +359,34 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
                 db.setTransactionSuccessful()
             } catch (e: Exception) {
                 Log.e(TAG, "Migration to v4 failed: ${e.message}", e)
+            } finally {
+                db.endTransaction()
+            }
+        }
+        if (oldVersion < 5) {
+            try {
+                db.beginTransaction()
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS $TABLE_CONVERSATIONS (
+                        $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        $COLUMN_CONV_ID TEXT NOT NULL,
+                        $COLUMN_MESSAGE_ID TEXT UNIQUE NOT NULL,
+                        $COLUMN_ROLE TEXT NOT NULL CHECK($COLUMN_ROLE IN ('user', 'assistant', 'system')),
+                        $COLUMN_CONTENT TEXT NOT NULL,
+                        $COLUMN_MODALITY TEXT NOT NULL CHECK($COLUMN_MODALITY IN ('TEXT', 'AUDIO')),
+                        $COLUMN_CONV_TIMESTAMP INTEGER NOT NULL,
+                        $COLUMN_SOURCE_METADATA TEXT DEFAULT '',
+                        $COLUMN_RETRIEVED_EVENT_IDS TEXT DEFAULT '',
+                        $COLUMN_IS_CONFLICT INTEGER DEFAULT 0
+                    );
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_conv_id ON $TABLE_CONVERSATIONS($COLUMN_CONV_ID);")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_conv_timestamp ON $TABLE_CONVERSATIONS($COLUMN_CONV_TIMESTAMP);")
+                db.setTransactionSuccessful()
+            } catch (e: Exception) {
+                Log.e(TAG, "Migration to v5 failed: ${e.message}", e)
             } finally {
                 db.endTransaction()
             }
@@ -1010,6 +1086,7 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
         val db = getWritableEncryptedDatabase()
         db.beginTransaction()
         try {
+            db.execSQL("DELETE FROM $TABLE_CONVERSATIONS;")
             db.execSQL("DELETE FROM $TABLE_SYNC_QUEUE;")
             db.execSQL("DELETE FROM $TABLE_TRANSACTIONS;")
             db.execSQL("DELETE FROM $TABLE_CUSTOMERS;")
@@ -1018,6 +1095,251 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
         } finally {
             db.endTransaction()
         }
+    }
+
+    /**
+     * Insert a chat message into encrypted conversation history.
+     */
+    fun insertChatMessage(message: ChatMessageEntity): Long {
+        val db = getWritableEncryptedDatabase()
+        val values = ContentValues().apply {
+            put(COLUMN_CONV_ID, message.conversationId)
+            put(COLUMN_MESSAGE_ID, message.messageId)
+            put(COLUMN_ROLE, message.role)
+            put(COLUMN_CONTENT, message.content)
+            put(COLUMN_MODALITY, message.modality)
+            put(COLUMN_CONV_TIMESTAMP, message.timestamp)
+            put(COLUMN_SOURCE_METADATA, message.sourceMetadata)
+            put(COLUMN_RETRIEVED_EVENT_IDS, message.retrievedEventIds)
+            put(COLUMN_IS_CONFLICT, if (message.isConflict) 1 else 0)
+        }
+        return db.insert(TABLE_CONVERSATIONS, null, values)
+    }
+
+    /**
+     * Retrieve messages for a conversation ordered chronologically.
+     */
+    fun getConversationMessages(conversationId: String, limit: Int = 100): List<ChatMessageEntity> {
+        val db = getReadableEncryptedDatabase()
+        val query = """
+            SELECT 
+                $COLUMN_ID, $COLUMN_CONV_ID, $COLUMN_MESSAGE_ID, $COLUMN_ROLE,
+                $COLUMN_CONTENT, $COLUMN_MODALITY, $COLUMN_CONV_TIMESTAMP,
+                $COLUMN_SOURCE_METADATA, $COLUMN_RETRIEVED_EVENT_IDS, $COLUMN_IS_CONFLICT
+            FROM $TABLE_CONVERSATIONS
+            WHERE $COLUMN_CONV_ID = ?
+            ORDER BY $COLUMN_CONV_TIMESTAMP ASC, $COLUMN_ID ASC
+            LIMIT ?
+        """.trimIndent()
+
+        val list = ArrayList<ChatMessageEntity>()
+        val cursor = db.rawQuery(query, arrayOf(conversationId, limit.toString()))
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    ChatMessageEntity(
+                        id = it.getLong(0),
+                        conversationId = it.getString(1),
+                        messageId = it.getString(2),
+                        role = it.getString(3),
+                        content = it.getString(4),
+                        modality = it.getString(5),
+                        timestamp = it.getLong(6),
+                        sourceMetadata = it.getString(7) ?: "",
+                        retrievedEventIds = it.getString(8) ?: "",
+                        isConflict = it.getInt(9) == 1
+                    )
+                )
+            }
+        }
+        return list
+    }
+
+    /**
+     * Clear all messages for a conversation.
+     */
+    fun clearConversation(conversationId: String): Boolean {
+        val db = getWritableEncryptedDatabase()
+        val rows = db.delete(TABLE_CONVERSATIONS, "$COLUMN_CONV_ID = ?", arrayOf(conversationId))
+        return rows >= 0
+    }
+
+    /**
+     * Retrieve all customer names in alphabetical order.
+     */
+    fun getAllCustomerNames(): List<String> {
+        val db = getReadableEncryptedDatabase()
+        val query = "SELECT $COLUMN_NAME FROM $TABLE_CUSTOMERS ORDER BY $COLUMN_NAME COLLATE NOCASE ASC"
+        val list = ArrayList<String>()
+        val cursor = db.rawQuery(query, null)
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(it.getString(0))
+            }
+        }
+        return list
+    }
+
+    /**
+     * Calculate total outstanding balance (in integer paise) across all customers.
+     */
+    fun getTotalOutstandingBalancePaise(): Long {
+        val db = getReadableEncryptedDatabase()
+        val query = """
+            SELECT 
+                SUM(CASE 
+                    WHEN $COLUMN_TYPE = 'CREDIT' THEN $COLUMN_AMOUNT_PAISE 
+                    WHEN $COLUMN_TYPE = 'PAYMENT' THEN -$COLUMN_AMOUNT_PAISE 
+                    WHEN $COLUMN_TYPE = 'REVERSAL' THEN -$COLUMN_AMOUNT_PAISE 
+                    ELSE 0 
+                END)
+            FROM $TABLE_TRANSACTIONS
+        """.trimIndent()
+        val cursor = db.rawQuery(query, null)
+        cursor.use {
+            if (it.moveToFirst() && !it.isNull(0)) {
+                return it.getLong(0)
+            }
+        }
+        return 0L
+    }
+
+    /**
+     * Retrieve transactions within a specific timestamp range.
+     */
+    fun getTransactionsByDateRange(startTimestamp: Long, endTimestamp: Long): List<TransactionEntity> {
+        val db = getReadableEncryptedDatabase()
+        val query = """
+            SELECT 
+                t.$COLUMN_ID, t.$COLUMN_EVENT_ID, c.$COLUMN_NAME, t.$COLUMN_AMOUNT_PAISE, 
+                t.$COLUMN_TYPE, t.$COLUMN_TIMESTAMP, t.$COLUMN_NOTE, t.$COLUMN_REVERSAL_TARGET_ID,
+                t.$COLUMN_EVENT_HASH, t.$COLUMN_PREVIOUS_EVENT_HASH
+            FROM $TABLE_TRANSACTIONS t
+            INNER JOIN $TABLE_CUSTOMERS c ON t.$COLUMN_CUSTOMER_ID = c.$COLUMN_ID
+            WHERE t.$COLUMN_TIMESTAMP >= ? AND t.$COLUMN_TIMESTAMP <= ?
+            ORDER BY t.$COLUMN_TIMESTAMP DESC, t.$COLUMN_ID DESC
+        """.trimIndent()
+
+        val list = ArrayList<TransactionEntity>()
+        val cursor = db.rawQuery(query, arrayOf(startTimestamp.toString(), endTimestamp.toString()))
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    TransactionEntity(
+                        id = it.getLong(0),
+                        eventId = it.getString(1) ?: "",
+                        customerName = it.getString(2) ?: "",
+                        amountPaise = it.getLong(3),
+                        type = it.getString(4) ?: "CREDIT",
+                        timestamp = it.getLong(5),
+                        note = it.getString(6) ?: "",
+                        reversalTargetId = if (it.isNull(7)) null else it.getLong(7),
+                        eventHash = it.getString(8) ?: "",
+                        previousEventHash = it.getString(9) ?: ""
+                    )
+                )
+            }
+        }
+        return list
+    }
+
+    /**
+     * Retrieve transactions filtered by category/type.
+     */
+    fun getTransactionsByCategory(category: String, limit: Int = 100): List<TransactionEntity> {
+        val db = getReadableEncryptedDatabase()
+        // Map category filter to database column or note
+        val list = ArrayList<TransactionEntity>()
+        val query = if (category.equals("STUCK", ignoreCase = true) || category.equals("ILLEGAL", ignoreCase = true)) {
+            """
+                SELECT 
+                    t.$COLUMN_ID, t.$COLUMN_EVENT_ID, c.$COLUMN_NAME, t.$COLUMN_AMOUNT_PAISE, 
+                    t.$COLUMN_TYPE, t.$COLUMN_TIMESTAMP, t.$COLUMN_NOTE, t.$COLUMN_REVERSAL_TARGET_ID,
+                    t.$COLUMN_EVENT_HASH, t.$COLUMN_PREVIOUS_EVENT_HASH
+                FROM $TABLE_TRANSACTIONS t
+                INNER JOIN $TABLE_CUSTOMERS c ON t.$COLUMN_CUSTOMER_ID = c.$COLUMN_ID
+                WHERE t.$COLUMN_NOTE LIKE ? COLLATE NOCASE
+                ORDER BY t.$COLUMN_TIMESTAMP DESC, t.$COLUMN_ID DESC
+                LIMIT ?
+            """.trimIndent()
+        } else {
+            val dbType = if (category.equals("DEBIT", ignoreCase = true)) "PAYMENT" else "CREDIT"
+            """
+                SELECT 
+                    t.$COLUMN_ID, t.$COLUMN_EVENT_ID, c.$COLUMN_NAME, t.$COLUMN_AMOUNT_PAISE, 
+                    t.$COLUMN_TYPE, t.$COLUMN_TIMESTAMP, t.$COLUMN_NOTE, t.$COLUMN_REVERSAL_TARGET_ID,
+                    t.$COLUMN_EVENT_HASH, t.$COLUMN_PREVIOUS_EVENT_HASH
+                FROM $TABLE_TRANSACTIONS t
+                INNER JOIN $TABLE_CUSTOMERS c ON t.$COLUMN_CUSTOMER_ID = c.$COLUMN_ID
+                WHERE t.$COLUMN_TYPE = '$dbType'
+                ORDER BY t.$COLUMN_TIMESTAMP DESC, t.$COLUMN_ID DESC
+                LIMIT ?
+            """.trimIndent()
+        }
+
+        val param = if (category.equals("STUCK", ignoreCase = true) || category.equals("ILLEGAL", ignoreCase = true)) {
+            arrayOf("%$category%", limit.toString())
+        } else {
+            arrayOf(limit.toString())
+        }
+
+        val cursor = db.rawQuery(query, param)
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    TransactionEntity(
+                        id = it.getLong(0),
+                        eventId = it.getString(1) ?: "",
+                        customerName = it.getString(2) ?: "",
+                        amountPaise = it.getLong(3),
+                        type = it.getString(4) ?: "CREDIT",
+                        timestamp = it.getLong(5),
+                        note = it.getString(6) ?: "",
+                        reversalTargetId = if (it.isNull(7)) null else it.getLong(7),
+                        eventHash = it.getString(8) ?: "",
+                        previousEventHash = it.getString(9) ?: ""
+                    )
+                )
+            }
+        }
+        return list
+    }
+
+    /**
+     * Retrieve the most recent payment transaction for a customer.
+     */
+    fun getLastPaymentForCustomer(customerName: String): TransactionEntity? {
+        val db = getReadableEncryptedDatabase()
+        val query = """
+            SELECT 
+                t.$COLUMN_ID, t.$COLUMN_EVENT_ID, c.$COLUMN_NAME, t.$COLUMN_AMOUNT_PAISE, 
+                t.$COLUMN_TYPE, t.$COLUMN_TIMESTAMP, t.$COLUMN_NOTE, t.$COLUMN_REVERSAL_TARGET_ID,
+                t.$COLUMN_EVENT_HASH, t.$COLUMN_PREVIOUS_EVENT_HASH
+            FROM $TABLE_TRANSACTIONS t
+            INNER JOIN $TABLE_CUSTOMERS c ON t.$COLUMN_CUSTOMER_ID = c.$COLUMN_ID
+            WHERE c.$COLUMN_NAME = ? COLLATE NOCASE AND t.$COLUMN_TYPE = 'PAYMENT'
+            ORDER BY t.$COLUMN_TIMESTAMP DESC, t.$COLUMN_ID DESC
+            LIMIT 1
+        """.trimIndent()
+
+        val cursor = db.rawQuery(query, arrayOf(customerName.trim()))
+        cursor.use {
+            if (it.moveToFirst()) {
+                return TransactionEntity(
+                    id = it.getLong(0),
+                    eventId = it.getString(1) ?: "",
+                    customerName = it.getString(2) ?: "",
+                    amountPaise = it.getLong(3),
+                    type = it.getString(4) ?: "PAYMENT",
+                    timestamp = it.getLong(5),
+                    note = it.getString(6) ?: "",
+                    reversalTargetId = if (it.isNull(7)) null else it.getLong(7),
+                    eventHash = it.getString(8) ?: "",
+                    previousEventHash = it.getString(9) ?: ""
+                )
+            }
+        }
+        return null
     }
 
     private fun getOrCreateCustomer(db: SQLiteDatabase, customerName: String): Long {

@@ -22,6 +22,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.ChatbotActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>
