@@ -2,6 +2,7 @@
  * Copyright (c) 2026 KHATAWAS Project
  * Simplified Technical English (ASD STE-100) compliant.
  * Cryptographic key manager for SQLCipher database encryption.
+ * Enforces fail-closed security: never falls back to plain text key storage.
  */
 
 package com.khatawas.db
@@ -14,7 +15,7 @@ import java.security.SecureRandom
 /**
  * Manages database encryption keys using Android Keystore and EncryptedSharedPreferences.
  * Does not store encryption passwords in plain text.
- * Generates a 256-bit cryptographic key on the first application launch.
+ * Fails closed if hardware-backed cryptographic storage cannot be initialized.
  */
 object DatabaseKeyManager {
 
@@ -22,19 +23,23 @@ object DatabaseKeyManager {
     private const val KEY_ALIAS_DB_SECRET = "db_encryption_key_256"
     private const val KEY_SIZE_BYTES = 32 // 256 bits
 
+    @Volatile
     private var cachedPassphrase: ByteArray? = null
 
     /**
      * Retrieve the 256-bit database passphrase.
      * Generates and securely stores a new key if no key exists.
-     * Parameter context: Android application context.
-     * Returns 256-bit encryption key as a byte array.
+     * Fails closed if EncryptedSharedPreferences cannot be initialized.
+     *
+     * @param context Android application context.
+     * @return 256-bit encryption key as a byte array.
+     * @throws SecurityException If hardware keystore or encrypted storage fails.
      */
     @Synchronized
     fun getOrCreatePassphrase(context: Context): ByteArray {
         cachedPassphrase?.let { return it }
 
-        val appContext = context.applicationContext
+        val appContext = context.applicationContext ?: context
 
         val securePrefs = try {
             val masterKey = MasterKey.Builder(appContext)
@@ -49,8 +54,11 @@ object DatabaseKeyManager {
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
-            // Fallback for devices without hardware keystore support
-            appContext.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
+            // Strict fail-closed rule: never fall back to plaintext unencrypted storage
+            throw SecurityException(
+                "Hardware Keystore / EncryptedSharedPreferences initialization failed. " +
+                        "Plaintext fallback is prohibited for financial ledger security.", e
+            )
         }
 
         var keyHex = securePrefs.getString(KEY_ALIAS_DB_SECRET, null)
