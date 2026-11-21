@@ -58,6 +58,18 @@ object RustEngine {
     external fun nativeAudioPipelineDestroy(handle: Long): Boolean
     external fun nativeAudioPipelineGetProcessedFrames(handle: Long): Long
 
+    // Milestone 5: Stateful Denoising Engine Management
+    const val DENOISE_MODE_SPECTRAL_SUBTRACTION = 0
+    const val DENOISE_MODE_WIENER_FILTER = 1
+    const val DENOISE_MODE_COMBINED = 2
+
+    external fun nativeDenoiseCreate(mode: Int): Long
+    external fun nativeDenoiseDestroy(handle: Long): Boolean
+    external fun nativeDenoiseReset(handle: Long): Boolean
+    external fun nativeDenoiseSetMode(handle: Long, mode: Int): Boolean
+    external fun nativeDenoiseProcess(handle: Long, inFloats: FloatArray, outFloats: FloatArray): Int
+    external fun nativeDenoiseProcessDirect(mode: Int, inFloats: FloatArray, outFloats: FloatArray): Int
+
     external fun nativeParseUtterance(utterance: String): String
     external fun nativeCalculateBalance(credits: LongArray, payments: LongArray, reversals: LongArray): Long
 }

@@ -10,6 +10,7 @@ use std::sync::Mutex;
 use khatawas_core::audio::pipeline::AudioPipelineState;
 use khatawas_core::core_add;
 use khatawas_core::core_version;
+use khatawas_core::dsp::denoise::{DenoiseMode, RustDenoiseProcessor, FRAME_SIZE_480};
 use khatawas_core::dsp::fir::FirDecimator3;
 use khatawas_core::ledger::LedgerEngine;
 
@@ -45,6 +46,7 @@ pub struct JNINativeInterface {
 
 const FIR_HANDLE_MAGIC: u32 = 0x4B485457; // 'KHTW'
 const AUDIO_PIPELINE_MAGIC: u32 = 0x41554450; // 'AUDP'
+const DENOISE_HANDLE_MAGIC: u32 = 0x44454E4F; // 'DENO'
 
 #[repr(C)]
 struct FirHandle {
@@ -56,6 +58,12 @@ struct FirHandle {
 struct AudioPipelineHandle {
     magic: u32,
     pipeline: AudioPipelineState,
+}
+
+#[repr(C)]
+struct DenoiseHandle {
+    magic: u32,
+    processor: RustDenoiseProcessor,
 }
 
 static FALLBACK_FIR: Mutex<Option<FirDecimator3>> = Mutex::new(None);
@@ -444,6 +452,146 @@ pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeAudioPipel
         return 0;
     }
     (*ptr).pipeline.processed_frames() as i64
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 5: Stateful Denoising Engine Management (STFT / Spectral Sub / Wiener)
+// ---------------------------------------------------------------------------
+
+fn parse_denoise_mode(mode: i32) -> DenoiseMode {
+    match mode {
+        0 => DenoiseMode::SpectralSubtraction,
+        1 => DenoiseMode::WienerFilter,
+        _ => DenoiseMode::Combined,
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_khatawas_rust_RustEngine_nativeDenoiseCreate(
+    _env: JNIEnv,
+    _class: JClass,
+    mode: i32,
+) -> i64 {
+    let handle = Box::new(DenoiseHandle {
+        magic: DENOISE_HANDLE_MAGIC,
+        processor: RustDenoiseProcessor::new(parse_denoise_mode(mode)),
+    });
+    Box::into_raw(handle) as i64
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeDenoiseDestroy(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+) -> u8 {
+    if handle == 0 {
+        return 0;
+    }
+    let ptr = handle as *mut DenoiseHandle;
+    if (*ptr).magic == DENOISE_HANDLE_MAGIC {
+        (*ptr).magic = 0;
+        let _ = Box::from_raw(ptr);
+        1
+    } else {
+        0
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeDenoiseReset(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+) -> u8 {
+    if handle == 0 {
+        return 0;
+    }
+    let ptr = handle as *mut DenoiseHandle;
+    if (*ptr).magic != DENOISE_HANDLE_MAGIC {
+        return 0;
+    }
+    (*ptr).processor.reset();
+    1
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeDenoiseSetMode(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+    mode: i32,
+) -> u8 {
+    if handle == 0 {
+        return 0;
+    }
+    let ptr = handle as *mut DenoiseHandle;
+    if (*ptr).magic != DENOISE_HANDLE_MAGIC {
+        return 0;
+    }
+    (*ptr).processor.set_mode(parse_denoise_mode(mode));
+    1
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeDenoiseProcess(
+    env: JNIEnv,
+    _class: JClass,
+    handle: i64,
+    in_floats: JFloatArray,
+    out_floats: JFloatArray,
+) -> i32 {
+    if handle == 0 || env.is_null() || in_floats.is_null() || out_floats.is_null() {
+        return -1;
+    }
+    let ptr = handle as *mut DenoiseHandle;
+    if (*ptr).magic != DENOISE_HANDLE_MAGIC {
+        return -1;
+    }
+    let iface = **env;
+    let in_len = (iface.get_array_length)(env, in_floats);
+    let out_len = (iface.get_array_length)(env, out_floats);
+    if in_len < FRAME_SIZE_480 as i32 || out_len < FRAME_SIZE_480 as i32 {
+        return -2;
+    }
+
+    let mut in_buf = [0.0f32; FRAME_SIZE_480];
+    let mut out_buf = [0.0f32; FRAME_SIZE_480];
+
+    (iface.get_float_array_region)(env, in_floats, 0, FRAME_SIZE_480 as i32, in_buf.as_mut_ptr());
+    (*ptr).processor.process_frame(&in_buf, &mut out_buf);
+    (iface.set_float_array_region)(env, out_floats, 0, FRAME_SIZE_480 as i32, out_buf.as_ptr());
+
+    FRAME_SIZE_480 as i32
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_khatawas_rust_RustEngine_nativeDenoiseProcessDirect(
+    env: JNIEnv,
+    _class: JClass,
+    mode: i32,
+    in_floats: JFloatArray,
+    out_floats: JFloatArray,
+) -> i32 {
+    if env.is_null() || in_floats.is_null() || out_floats.is_null() {
+        return -1;
+    }
+    let iface = **env;
+    let in_len = (iface.get_array_length)(env, in_floats);
+    let out_len = (iface.get_array_length)(env, out_floats);
+    if in_len < FRAME_SIZE_480 as i32 || out_len < FRAME_SIZE_480 as i32 {
+        return -2;
+    }
+
+    let mut in_buf = [0.0f32; FRAME_SIZE_480];
+    let mut out_buf = [0.0f32; FRAME_SIZE_480];
+
+    (iface.get_float_array_region)(env, in_floats, 0, FRAME_SIZE_480 as i32, in_buf.as_mut_ptr());
+    let mut processor = RustDenoiseProcessor::new(parse_denoise_mode(mode));
+    processor.process_frame(&in_buf, &mut out_buf);
+    (iface.set_float_array_region)(env, out_floats, 0, FRAME_SIZE_480 as i32, out_buf.as_ptr());
+
+    FRAME_SIZE_480 as i32
 }
 
 // ---------------------------------------------------------------------------

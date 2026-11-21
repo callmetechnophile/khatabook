@@ -83,6 +83,8 @@ class MainActivity : AppCompatActivity() {
         runMilestone3Verification()
         // Phase 6 Runtime JNI Verification for Milestone 4 (Rust Audio Pipeline Core)
         runMilestone4Verification()
+        // Phase 5 Runtime JNI Verification for Milestone 5 (Rust Audio Denoising Engine)
+        runMilestone5Verification()
 
         appOrchestrator = AppOrchestrator(this)
         audioPipeline = AudioPipeline(appOrchestrator.rnnoiseProcessor)
@@ -426,6 +428,31 @@ class MainActivity : AppCompatActivity() {
             Log.e("KHATAWAS_M4_VERIFICATION", "Milestone 4 runtime verification failed", e)
         }
         Log.i("KHATAWAS_M4_VERIFICATION", "=== END MILESTONE 4 AUDIO PIPELINE RUNTIME VERIFICATION ===")
+    }
+
+    private fun runMilestone5Verification() {
+        Log.i("KHATAWAS_M5_VERIFICATION", "=== BEGIN MILESTONE 5 AUDIO DENOISING RUNTIME VERIFICATION ===")
+        try {
+            val denoiser = com.khatawas.audio.RustDenoiseProcessor(com.khatawas.audio.RustDenoiseProcessor.MODE_WIENER_FILTER)
+            Log.i("KHATAWAS_M5_VERIFICATION", "RustDenoiseProcessor initialized, isAvailable = ${denoiser.isAvailable}")
+
+            val inFloats = FloatArray(480) { 800.0f }
+            val outFloats = FloatArray(480)
+            val written = denoiser.processFrame(inFloats, outFloats)
+            Log.i("KHATAWAS_M5_VERIFICATION", "Processed 480 floats -> $written output samples, out[0]=${outFloats[0]}, out[479]=${outFloats[479]}")
+
+            val modeChanged = denoiser.setMode(com.khatawas.audio.RustDenoiseProcessor.MODE_SPECTRAL_SUBTRACTION)
+            Log.i("KHATAWAS_M5_VERIFICATION", "Changed mode to Spectral Subtraction: $modeChanged")
+
+            val resetSuccess = denoiser.reset()
+            Log.i("KHATAWAS_M5_VERIFICATION", "RustDenoiseProcessor reset successful: $resetSuccess")
+
+            denoiser.close()
+            Log.i("KHATAWAS_M5_VERIFICATION", "RustDenoiseProcessor closed cleanly, isAvailable = ${denoiser.isAvailable}")
+        } catch (e: Throwable) {
+            Log.e("KHATAWAS_M5_VERIFICATION", "Milestone 5 runtime verification failed", e)
+        }
+        Log.i("KHATAWAS_M5_VERIFICATION", "=== END MILESTONE 5 AUDIO DENOISING RUNTIME VERIFICATION ===")
     }
 
     override fun onDestroy() {

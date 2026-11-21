@@ -1,90 +1,206 @@
 /*
  * Copyright (c) 2026 KHATAWAS Project
- * Real-time Kirana noise suppression engine in pure Rust.
- * Spectral tracking, high-pass rumble suppression, and voice activity gain control.
+ * Pure Rust audio denoising engine combining STFT, Noise Estimation, Spectral Subtraction, and Wiener Filtering.
  */
 
+use crate::dsp::noise_est::NoiseEstimator;
+use crate::dsp::spectral_sub::SpectralSubtractEngine;
+use crate::dsp::stft::{
+    apply_spectral_gains, compute_power, fft_radix2, ifft_radix2, FFT_SIZE,
+    HALF_FFT,
+};
+use crate::dsp::wiener::WienerFilterEngine;
+
+pub const FRAME_SIZE_480: usize = 480;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DenoiseMode {
+    SpectralSubtraction,
+    WienerFilter,
+    Combined,
+}
+
 pub struct RustDenoiseProcessor {
-    noise_floor: f32,
-    alpha: f32,
-    hp_prev_in: f32,
-    hp_prev_out: f32,
-    vad_threshold: f32,
+    mode: DenoiseMode,
+    noise_estimator: NoiseEstimator,
+    spectral_subtract: SpectralSubtractEngine,
+    wiener_filter: WienerFilterEngine,
+    re: [f32; FFT_SIZE],
+    im: [f32; FFT_SIZE],
+    power: [f32; HALF_FFT],
+    gains: [f32; HALF_FFT],
+    ola_tail: [f32; FFT_SIZE - FRAME_SIZE_480], // 32 samples overlap tail
+    processed_frames: u64,
+}
+
+impl Default for RustDenoiseProcessor {
+    fn default() -> Self {
+        Self::new(DenoiseMode::WienerFilter)
+    }
 }
 
 impl RustDenoiseProcessor {
-    pub fn new() -> Self {
+    /// Creates a streaming denoiser configured with the specified enhancement mode.
+    pub fn new(mode: DenoiseMode) -> Self {
         Self {
-            noise_floor: 200.0,
-            alpha: 0.98,
-            hp_prev_in: 0.0,
-            hp_prev_out: 0.0,
-            vad_threshold: 450.0,
+            mode,
+            noise_estimator: NoiseEstimator::new(),
+            spectral_subtract: SpectralSubtractEngine::new(),
+            wiener_filter: WienerFilterEngine::new(),
+            re: [0.0f32; FFT_SIZE],
+            im: [0.0f32; FFT_SIZE],
+            power: [0.0f32; HALF_FFT],
+            gains: [1.0f32; HALF_FFT],
+            ola_tail: [0.0f32; FFT_SIZE - FRAME_SIZE_480],
+            processed_frames: 0,
         }
     }
 
-    /// Process a frame of 480 floating-point samples (10 ms at 48 kHz).
-    /// Applies 2nd-order high-pass rumble filter and adaptive gain suppression during non-speech pauses.
-    pub fn process_frame(&mut self, input: &[f32], output: &mut [f32]) {
-        assert_eq!(input.len(), output.len());
+    pub fn mode(&self) -> DenoiseMode {
+        self.mode
+    }
 
-        // 1. High-pass filter (cutoff ~100 Hz at 48 kHz) to remove AC hum and traffic rumble
-        // R = 1 - (2 * pi * fc / fs) ~ 0.9869
-        let r = 0.9869f32;
-        let mut frame_energy = 0.0f32;
+    pub fn set_mode(&mut self, mode: DenoiseMode) {
+        self.mode = mode;
+    }
 
-        for (i, &sample) in input.iter().enumerate() {
-            let hp_out = sample - self.hp_prev_in + r * self.hp_prev_out;
-            self.hp_prev_in = sample;
-            self.hp_prev_out = hp_out;
-            output[i] = hp_out;
-            frame_energy += hp_out.abs();
-        }
-
-        let mean_energy = frame_energy / input.len() as f32;
-
-        // 2. Adaptive noise floor estimation
-        if mean_energy < self.noise_floor * 1.5 {
-            self.noise_floor = self.alpha * self.noise_floor + (1.0 - self.alpha) * mean_energy;
-        }
-
-        // 3. Soft spectral gating / noise attenuation
-        let snr = mean_energy / (self.noise_floor + 1.0);
-        let gain = if snr < 1.2 {
-            0.15f32 // Attenuate background floor by ~16 dB during silence
-        } else if snr < 2.5 {
-            0.15f32 + (snr - 1.2) * 0.65f32
-        } else {
-            1.0f32 // Full fidelity for active speech
-        };
-
-        for sample in output.iter_mut() {
-            *sample *= gain;
-        }
+    pub fn processed_frames(&self) -> u64 {
+        self.processed_frames
     }
 
     pub fn reset(&mut self) {
-        self.noise_floor = 200.0;
-        self.hp_prev_in = 0.0;
-        self.hp_prev_out = 0.0;
+        self.noise_estimator.reset();
+        self.spectral_subtract.reset();
+        self.wiener_filter.reset();
+        self.re.fill(0.0);
+        self.im.fill(0.0);
+        self.power.fill(0.0);
+        self.gains.fill(1.0);
+        self.ola_tail.fill(0.0);
+        self.processed_frames = 0;
+    }
+
+    /// Process a 480-sample audio frame at 48 kHz in-place or into separate output slice.
+    /// Performs zero runtime heap allocations.
+    pub fn process_frame(&mut self, input: &[f32], output: &mut [f32]) {
+        assert_eq!(input.len(), FRAME_SIZE_480, "Input frame must be exactly 480 samples");
+        assert_eq!(output.len(), FRAME_SIZE_480, "Output frame must be exactly 480 samples");
+
+        // 1. Copy 480 samples and zero-pad to 512 points for radix-2 FFT
+        for i in 0..FRAME_SIZE_480 {
+            self.re[i] = input[i];
+            self.im[i] = 0.0;
+        }
+        for i in FRAME_SIZE_480..FFT_SIZE {
+            self.re[i] = 0.0;
+            self.im[i] = 0.0;
+        }
+
+        // 2. Forward FFT
+        fft_radix2(&mut self.re, &mut self.im);
+
+        // 3. Compute Power Spectrum
+        compute_power(&self.re, &self.im, &mut self.power);
+
+        // 4. Update adaptive noise floor estimate
+        self.noise_estimator.update(&self.power);
+        let noise_p = self.noise_estimator.noise_power();
+
+        // 5. Compute suppression gains according to selected mode
+        match self.mode {
+            DenoiseMode::SpectralSubtraction => {
+                self.spectral_subtract.compute_gains(&self.power, noise_p, &mut self.gains);
+            }
+            DenoiseMode::WienerFilter => {
+                self.wiener_filter.compute_gains(&self.power, noise_p, &mut self.gains);
+            }
+            DenoiseMode::Combined => {
+                let mut sub_gains = [0.0f32; HALF_FFT];
+                let mut wiener_gains = [0.0f32; HALF_FFT];
+                self.spectral_subtract.compute_gains(&self.power, noise_p, &mut sub_gains);
+                self.wiener_filter.compute_gains(&self.power, noise_p, &mut wiener_gains);
+                for k in 0..HALF_FFT {
+                    // Geometric mean combination
+                    self.gains[k] = (sub_gains[k] * wiener_gains[k]).sqrt();
+                }
+            }
+        }
+
+        // 6. Apply spectral gains
+        apply_spectral_gains(&mut self.re, &mut self.im, &self.gains);
+
+        // 7. Inverse FFT
+        ifft_radix2(&mut self.re, &mut self.im);
+
+        // 8. Overlap-Add reconstruction:
+        // Add previous frame's tail (32 samples) to the beginning of current frame
+        let tail_len = self.ola_tail.len();
+        for i in 0..tail_len {
+            output[i] = self.re[i] + self.ola_tail[i];
+        }
+        for i in tail_len..FRAME_SIZE_480 {
+            output[i] = self.re[i];
+        }
+
+        // Store circular convolution tail (samples 480..512) for the next frame
+        for i in 0..tail_len {
+            self.ola_tail[i] = self.re[FRAME_SIZE_480 + i];
+        }
+
+        self.processed_frames += 1;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f32::consts::PI;
 
     #[test]
-    fn test_rumble_and_silence_attenuation() {
-        let mut denoiser = RustDenoiseProcessor::new();
-        let noise_frame = vec![50.0f32; 480]; // Low energy rumble
-        let mut out_frame = vec![0.0f32; 480];
+    fn test_denoiser_modes_execute_cleanly() {
+        let mut denoiser = RustDenoiseProcessor::new(DenoiseMode::WienerFilter);
+        let input = vec![100.0f32; FRAME_SIZE_480];
+        let mut output = vec![0.0f32; FRAME_SIZE_480];
 
-        denoiser.process_frame(&noise_frame, &mut out_frame);
-        let out_energy: f32 = out_frame.iter().map(|s| s.abs()).sum();
-        let in_energy: f32 = noise_frame.iter().map(|s| s.abs()).sum();
+        denoiser.process_frame(&input, &mut output);
+        assert_eq!(denoiser.processed_frames(), 1);
 
-        // DC / low frequency and silence should be significantly attenuated
-        assert!(out_energy < in_energy * 0.3);
+        denoiser.set_mode(DenoiseMode::SpectralSubtraction);
+        denoiser.process_frame(&input, &mut output);
+        assert_eq!(denoiser.processed_frames(), 2);
+
+        denoiser.set_mode(DenoiseMode::Combined);
+        denoiser.process_frame(&input, &mut output);
+        assert_eq!(denoiser.processed_frames(), 3);
+
+        denoiser.reset();
+        assert_eq!(denoiser.processed_frames(), 0);
+    }
+
+    #[test]
+    fn test_denoiser_attenuates_stationary_noise() {
+        let mut denoiser = RustDenoiseProcessor::new(DenoiseMode::WienerFilter);
+        let mut input = vec![0.0f32; FRAME_SIZE_480];
+        let mut output = vec![0.0f32; FRAME_SIZE_480];
+
+        // 100 Hz stationary tone representing electrical hum
+        for i in 0..FRAME_SIZE_480 {
+            input[i] = (2.0 * PI * 100.0 * (i as f32) / 48000.0).sin() * 500.0;
+        }
+
+        // Let noise estimator adapt over 30 frames
+        for _ in 0..30 {
+            denoiser.process_frame(&input, &mut output);
+        }
+
+        let in_power: f32 = input.iter().map(|&x| x * x).sum::<f32>() / (FRAME_SIZE_480 as f32);
+        let out_power: f32 = output.iter().map(|&x| x * x).sum::<f32>() / (FRAME_SIZE_480 as f32);
+
+        assert!(
+            out_power < in_power * 0.25,
+            "Stationary tone not suppressed: in_power={}, out_power={}",
+            in_power,
+            out_power
+        );
     }
 }
