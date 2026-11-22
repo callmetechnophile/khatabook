@@ -40,3 +40,4 @@ release/
 *.whl
 __pycache__/
 *.pyc
+scratch/
