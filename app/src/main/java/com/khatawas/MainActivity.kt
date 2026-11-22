@@ -1428,6 +1428,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updatePrivacyUi()
+        updateLanguageSelectionUi(LanguageManager.getLanguage(this))
         mainHandler.removeCallbacks(inactivityCheckRunnable)
         mainHandler.postDelayed(inactivityCheckRunnable, 5000L)
     }

@@ -80,20 +80,24 @@ object LanguageManager {
         val locale = Locale(langCode)
         Locale.setDefault(locale)
 
-        val res = context.resources
-        val config = Configuration(res.configuration)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            config.setLocale(locale)
-            val localeList = LocaleList(locale)
-            LocaleList.setDefault(localeList)
-            config.setLocales(localeList)
-            return context.createConfigurationContext(config)
-        } else {
-            @Suppress("DEPRECATION")
-            config.locale = locale
-            @Suppress("DEPRECATION")
-            res.updateConfiguration(config, res.displayMetrics)
-            return context
+        return try {
+            val res = context.resources ?: return context
+            val config = Configuration(res.configuration)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                config.setLocale(locale)
+                val localeList = LocaleList(locale)
+                LocaleList.setDefault(localeList)
+                config.setLocales(localeList)
+                context.createConfigurationContext(config)
+            } else {
+                @Suppress("DEPRECATION")
+                config.locale = locale
+                @Suppress("DEPRECATION")
+                res.updateConfiguration(config, res.displayMetrics)
+                context
+            }
+        } catch (e: Throwable) {
+            context
         }
     }
 

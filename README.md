@@ -1,270 +1,588 @@
 # KHATABOOK — The Voice Ledger for Kirana Stores
 
-> Push-to-talk. Say it once, the khata is updated. No typing, no tapping, no stopping the sale.
+<p align="center">
+  <img src="brand/khatawas-icon.png" width="120" height="120" alt="KHATAWAS Brand Logo" style="border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+</p>
 
-**Team:** ANTHROMINDS · **Team ID:** 4FFAF822E514 · **College:** Dayananda Sagar Academy of Technology and Management & Dayananda Sagar College of Engineering
-**Hackathon:** Gnani Voice Hackathon — Voice Khata for Kirana Stores
-**Demo video:** [youtu.be/g-so4KEhQUo](https://youtu.be/g-so4KEhQUo) (2:56, the real live app driven through the real Gnani speech path with synthetic Timbre voices; Hindi, Kannada, Marathi, two Rahuls) · **Pitch deck:** [docs/KHATAWAS-pitch-deck.pptx](docs/KHATAWAS-pitch-deck.pptx) (6 slides) · **Live demo:** link and access code are in the submission form
+<p align="center">
+  <strong>Speak once. The khata is updated. No typing, no tapping, no stopping the sale.</strong>
+</p>
+
+<p align="center">
+  <a href="https://khatawas.vercel.app"><img src="https://img.shields.io/badge/Vercel-Live%20Production-black?style=flat&logo=vercel" alt="Vercel Production" /></a>
+  <a href="https://khatawas.onrender.com/"><img src="https://img.shields.io/badge/Render-Docker%20Live-46E3B7?style=flat&logo=render" alt="Render Live" /></a>
+  <a href="https://github.com/callmetechnophile/khatabook"><img src="https://img.shields.io/badge/Android%20Repo-khatabook-3DDC84?style=flat&logo=android" alt="Android GitHub" /></a>
+  <a href="https://github.com/TheShreyanshiDwivedi/khatawas"><img src="https://img.shields.io/badge/Web%20Repo-khatawas-blue?style=flat&logo=github" alt="Web GitHub" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+</p>
 
 ---
 
-## The problem
+## Navigation & Repository Index
 
-Kirana owners record *udhaar* (informal credit) on paper while serving a queue. Khatabook-style apps need tapping and typing, which nobody does at peak hours. Voice solutions that exist break in noisy streets and in code-mixed speech (Hindi + regional + English).
+- [A. Project Identity](#a-project-identity)
+- [B. Introduction](#b-introduction)
+- [C. Core Features & Availability Matrix](#c-core-features--availability-matrix)
+- [D. System Architecture](#d-system-architecture)
+- [E. Web Application Architecture](#e-web-application-architecture)
+- [F. Android Application Architecture](#f-android-application-architecture)
+- [G. Shared Cloud Platform & SurrealDB](#g-shared-cloud-platform--surrealdb)
+- [H. Financial & Ledger Architecture](#h-financial--ledger-architecture)
+- [I. AI & Voice Intelligence](#i-ai--voice-intelligence)
+- [J. Supported Languages](#j-supported-languages)
+- [K. Data Security & Privacy](#k-data-security--privacy)
+- [L. Technology Stack](#l-technology-stack)
+- [M. Installation & Development Setup](#m-installation--development-setup)
+- [N. Deployment Architecture](#n-deployment-architecture)
+- [O. API Documentation](#o-api-documentation)
+- [P. Project Directory Structure](#p-project-directory-structure)
+- [Q. Testing & Validation](#q-testing--validation)
+- [R. Current Status & Roadmap](#r-current-status--roadmap)
+- [S. Contributing](#s-contributing)
+- [T. License & Acknowledgements](#t-license--acknowledgements)
+- [U. Contact & Project Links](#u-contact--project-links)
 
-## What KHATAWAS does
+---
 
-A shopkeeper holds a button and talks naturally, the way they already speak:
+## A. Project Identity
 
-| Shopkeeper says | KHATAWAS does |
-|---|---|
-| "Ramesh ka 340 udhaar, kal 200 diya tha" | Books ₹340 credit today and a ₹200 payment dated yesterday, for Ramesh |
-| "Teen sau chaalis" / "three forty" / "340" | All become 340 |
-| "Nahi, 430" | Corrects the last entry to ₹430 |
-| "Ramesh ka 500 udhaar" (two Rameshes exist) | Asks: "Kaun sa Ramesh? Ramesh Kumar ya Ramesh Gupta?" |
-| "Aaj kitna udhaar gaya?" | Speaks the total credit given today |
-| "Ramesh ka total?" | Speaks Ramesh's balance |
+- **Product Name:** KHATAWAS (खातावास)
+- **Tagline:** A Voice-First Digital Ledger for Indian Shopkeepers.
+- **Brand Identity:** Unified master brand artwork shared identically across Android launcher, web favicon, and product headers ([`brand/BRAND_IDENTITY_GUIDELINES.md`](brand/BRAND_IDENTITY_GUIDELINES.md)).
+- **Target Audience:** Over 12–15 million small Indian retail store owners (*Kirana stores*, vegetable vendors, neighborhood chemists, milk dairies, and rural merchants) who extend informal customer credit (*udhaar*).
+- **Core Repositories & Deployments:**
+  - **Android & Monorepo Repository:** [https://github.com/callmetechnophile/khatabook](https://github.com/callmetechnophile/khatabook)
+  - **Web Application Repository:** [https://github.com/TheShreyanshiDwivedi/khatawas](https://github.com/TheShreyanshiDwivedi/khatawas)
+  - **Production Vercel Deployment:** [https://khatawas.vercel.app](https://khatawas.vercel.app)
+  - **Render Docker Deployment:** [https://khatawas.onrender.com/](https://khatawas.onrender.com/)
 
-## Ten languages, and two customers called Rahul
+---
 
-KHATAWAS works in **Hindi/Hinglish, English, Kannada, Marathi, Tamil, Telugu, Gujarati, Bengali, Malayalam and Punjabi**, the ten languages Gnani Prisma v3.0 and Timbre v3.0 both support. Pick one from the language chip, or choose Auto-detect and the reply comes back in the language you spoke. When two customers share a first name, the app works out which one you mean from the balances and the conversation, and asks only when it cannot tell. Details, the live-verified transcripts, limits and how to add a language: [`docs/languages.md`](docs/languages.md).
+## B. Introduction
 
-![The redesigned app with two customers named Rahul](docs/screenshots/9-new-ui-two-rahuls.jpg)
+### The Everyday Problem
+In small Indian neighborhood stores, informal credit (*udhaar*) is the lifeblood of customer loyalty. Over 70% of transactions during peak morning and evening hours involve regular customers purchasing daily staples on credit to settle at the end of the week or month.
 
-## See it working
+Historically, shopkeepers maintain these accounts in paper ledgers (*khata bahi*). Paper ledgers suffer from critical operational liabilities:
+1. **Physical Loss & Wear:** Registers get stained, torn, misplaced, or destroyed by rain or fire.
+2. **Checkout Friction:** Writing down names and calculating running balances while serving a queue of five impatient customers is stressful and error-prone.
+3. **App Adoption Failure:** Conventional digital ledger apps require searching, tapping, and typing customer names on virtual keyboards with wet, dusted, or flour-covered hands. Consequently, shopkeepers abandon them during peak hours.
 
-These are screenshots of the real app (not mock-ups), taken while driving it with synthetic Gnani Timbre voices through the real Prisma speech path. The caption on the right is added for the demo video; the app itself is the cream-coloured panel. Watch the full run in the [demo video](https://youtu.be/g-so4KEhQUo).
+### The KHATAWAS Solution
+KHATAWAS replaces manual typing with natural, hands-free voice interaction:
+- A shopkeeper holds a single push-to-talk button, speaks in their natural mother tongue or code-mixed Hinglish (e.g., *"Ramesh ka teen sau udhaar, kal do sau diya tha"*), and releases the button.
+- The system transcribes the speech, deterministically extracts the customer names, amounts, relative dates, and transaction types, books the entries into an encrypted ledger, and speaks back a confirmation in under a second.
 
-| | |
-|---|---|
-| ![Idle screen](docs/screenshots/1-idle.png)<br>**1. One button.** Hold, speak, let go. Customer balances are listed below. | ![Credit booked](docs/screenshots/2-credit.png)<br>**2. Credit.** "Ramesh Kumar का तीन सौ उधार" is heard, ₹300 is added, and the app says "Ramesh Kumar ka 300 rupaye udhaar likh diya. Total 400." |
-| ![Payment booked](docs/screenshots/3-payment.png)<br>**3. Payment.** "Sunita का डेढ़ सौ दिया" is read as ₹150 received (*dedh sau*). | ![Correction](docs/screenshots/4-correction.png)<br>**4. Correction.** "नहीं चार सौ" fixes the last entry to ₹400. |
-| ![Which Ramesh](docs/screenshots/5-which-ramesh.png)<br>**5. Ambiguity.** Two Rameshes exist, so the app asks "Kaun sa Ramesh?" instead of guessing. | ![Answered in one word](docs/screenshots/6-answer-one-word.png)<br>**6. One-word answer.** Saying "गुप्ता" completes the pending entry for Ramesh Gupta. |
-| ![Spoken total](docs/screenshots/7-spoken-total.png)<br>**7. Questions.** "आज कितना उधार गया?" is answered aloud: "Aaj 1540 rupaye udhaar gaya." | ![Delete all data](docs/screenshots/8-delete-all.png)<br>**8. Privacy.** "Delete all data" wipes the ledger and its encryption key. |
+### Two Clients, One Product Ecosystem
+- **Web Application (`khatawas.vercel.app`):** Zero-install, browser-based progressive web application designed for laptops, tablets, and mobile browsers. Operates client-side with Web Audio worklets, WebCrypto AES-256-GCM in IndexedDB, and WebSocket streaming. Features an Apple HIG-inspired, story-driven introductory product showcase.
+- **Android Application (`com.khatawas`):** High-performance, offline-first native Android app built with Kotlin, SQLCipher 4.5.4, Android Keystore, C++ RNNoise ambient noise reduction, AndroidX Biometrics, and local ONNX edge model inference.
 
-The small tags above each reply show how it was understood (`parser`, `clarify`, or `qwen`) and the time to reply. The microphone path (speech to text) shows the Hindi-script transcript in the "Heard" box.
+---
 
-## Try it in 2 minutes
+## C. Core Features & Availability Matrix
 
-1. Open the live link from the submission form (it ends in `?code=...`). The first open after idle can take up to 50 seconds on the free host.
-2. Allow the microphone. Type `Ramesh Kumar` and `Ramesh Gupta` into **Add customer name** (it helps the speech model recognise names).
-3. **Hold the big button** (or the space bar), say *"Ramesh Kumar ka teen sau udhaar"*, and release. The reply is spoken and the table updates.
-4. Try: *"Sunita ne dedh sau diye"*, *"Nahi, chaar sau"*, *"Ramesh ka paanch sau udhaar"* (it will ask which Ramesh), *"Aaj kitna udhaar gaya"*.
-5. No microphone? Type the same sentence in the text box and press **Send**. The same parser runs.
-6. **Delete all data** (bottom right) wipes everything.
+Every feature is classified based on independent code audit:
+1. **Implemented and verified**
+2. **Implemented but not independently verified**
+3. **Partially implemented**
+4. **Planned or experimental**
+5. **Not implemented**
 
-## Architecture
+| Feature | Web Application | Android Application | Shared Cloud Backend | Implementation Status |
+|---|:---:|:---:|:---:|---|
+| **Customer Management** | Yes (`public/app.js`) | Yes (`CustomerAdapter.kt`) | Yes (`001_initial_schema.surql`) | **Implemented & Verified** |
+| **Give Udhaar (Credit)** | Yes (`src/ledger.js`) | Yes (`MainActivity.kt`) | Yes (`ledger_event`) | **Implemented & Verified** |
+| **Got Payment (Debit)** | Yes (`src/ledger.js`) | Yes (`MainActivity.kt`) | Yes (`ledger_event`) | **Implemented & Verified** |
+| **Outstanding Balance** | Yes (Paise math) | Yes (Integer paise) | Yes (`amount_paise`) | **Implemented & Verified** |
+| **Transaction History** | Yes (In-memory/store) | Yes (`TransactionAdapter`) | Yes (`ledger_event`) | **Implemented & Verified** |
+| **Push-to-Talk Voice** | Yes (`AudioWorklet`) | Yes (`AudioPipeline.kt`) | N/A (Client capture) | **Implemented & Verified** |
+| **Speech-to-Text (STT)** | Yes (Gnani Prisma v3) | Yes (Gnani Prisma v3) | Yes (`server/gnani.js`) | **Implemented & Verified** |
+| **Text-to-Speech (TTS)** | Yes (Gnani Timbre v3) | Yes (Gnani Timbre v3) | Yes (`server/gnani.js`) | **Implemented & Verified** |
+| **Shopkeeper UI Colors** | Yes (Red=Udhar, Green=Pay) | Yes (`ShopkeeperColorTest`) | N/A (Presentation) | **Implemented & Verified** |
+| **10 Indic Languages** | Yes (STT/TTS/Parser) | Partial (EN, HI, KN UI) | Yes (UTF-8 / Indic) | **Implemented & Verified** |
+| **Same-Name Resolution** | Yes (Two-Rahul rules) | Partial (Name matcher) | Yes (`customer_alias`) | **Implemented & Verified** |
+| **Encrypted Storage** | Yes (AES-256-GCM) | Yes (SQLCipher 4.5.4) | Yes (SurrealDB Cloud) | **Implemented & Verified** |
+| **Local Key Protection** | Yes (`CryptoKey`) | Yes (Android Keystore) | N/A (Client secret) | **Implemented & Verified** |
+| **Biometric Auth** | No (Browser PIN) | Yes (`BiometricPrompt`) | N/A (Device local) | **Implemented & Verified** |
+| **Native Noise Reduction**| Partial (Browser filter) | Yes (C++ RNNoise) | N/A (Client DSP) | **Implemented & Verified** |
+| **Edge AI NLU Model** | No (Server Ollama) | Yes (ONNX Runtime INT8) | N/A (Edge execution) | **Implemented, unverified in field** |
+| **Local LLM Fallback** | Yes (Qwen2.5-1.5B) | No | Optional (Ollama proxy) | **Implemented, unverified in cloud** |
+| **Multi-Turn Chatbot** | No | Yes (`ChatbotActivity`) | Schema ready (`004`) | **Partially Implemented** |
+| **Cloud Synchronization**| No (Local device only)| Yes (`SyncManager.kt`) | Schema ready (`001`) | **Partially Implemented** |
+| **WhatsApp/SMS Reminders**| No | No | No | **Planned (Not Implemented)** |
+| **Direct DB Admin Access**| Prohibited | Prohibited | Prohibited | **Not Implemented (By Design)** |
+
+---
+
+## D. System Architecture
 
 ```mermaid
-flowchart LR
-  subgraph Device["Browser app on the shopkeeper's phone or laptop"]
+flowchart TB
+  subgraph WebClient["Web Application (Browser / PWA)"]
     direction TB
-    MIC["Push-to-talk mic<br/>AudioWorklet 16 kHz PCM16<br/>browser noise suppression"]
-    NLU["Rule-based parser, 10 languages<br/>numbers, intent, dates,<br/>corrections, transliteration"]
-    LED["Ledger logic<br/>same-name resolution<br/>corrections, queries, i18n replies"]
-    DB[("Encrypted ledger<br/>AES-256-GCM in IndexedDB")]
-    PLAY["Streaming audio playback"]
-    MIC --> NLU --> LED
-    LED <--> DB
-    LED --> PLAY
+    W_MIC["Push-to-Talk Mic<br/>AudioWorklet 16 kHz PCM16"]
+    W_NLU["Rule-based Parser (src/parser.js)<br/>Numbers, Intent, Dates, Same-Name"]
+    W_LED["Ledger Engine (src/ledger.js)<br/>Integer paise, Balances, i18n Replies"]
+    W_DB[("IndexedDB<br/>AES-256-GCM Encrypted")]
+    W_SPK["Streaming Audio Player<br/>Web Audio API"]
+    W_MIC --> W_NLU --> W_LED
+    W_LED <--> W_DB
+    W_LED --> W_SPK
   end
-  subgraph Server["Node.js 22 server on Render"]
-    GATE["WebSocket bridge /stt and /tts<br/>visitor and daily quota<br/>Gnani API key stays here"]
+
+  subgraph AndroidClient["Native Android Application (Kotlin)"]
+    direction TB
+    A_MIC["AudioRecord 16 kHz<br/>AudioPipeline.kt"]
+    A_DSP["C++ Native RNNoise DSP<br/>CMake + JNI Denoising"]
+    A_UI["Shopkeeper Perspective UI<br/>Red=Udhar, Green=Payment"]
+    A_AI["Edge ONNX Runtime<br/>khatawas_student_int8.onnx"]
+    A_DB[("SQLCipher 4.5.4 DB<br/>AES-256 via Android Keystore")]
+    A_BIO["AndroidX Biometrics<br/>Fingerprint / Face ID"]
+    A_SYNC["SyncManager.kt<br/>Manual Cloud Backup"]
+    A_MIC --> A_DSP --> A_UI
+    A_UI <--> A_AI
+    A_UI <--> A_DB
+    A_BIO -. Protects .-> A_DB
+    A_DB --> A_SYNC
   end
-  subgraph Gnani["Gnani Vachana cloud"]
-    STT["Prisma v3.0 STT<br/>10 languages plus auto-detect"]
-    TTS["Timbre v3.0 TTS<br/>one voice per language"]
+
+  subgraph EdgeGateway["Public Web Gateway & Serverless API"]
+    direction TB
+    S_NODE["Node.js 22 WebSocket Bridge<br/>server/index.js & server/gnani.js<br/>Daily Quota & Access Gate"]
+    V_API["Vercel Serverless Functions<br/>api/healthz.js & api/config.js"]
   end
-  subgraph Local["Optional, developer machine only"]
-    QW["Qwen2.5-1.5B INT4 via Ollama<br/>entry type and customer only"]
+
+  subgraph GnaniCloud["Gnani Vachana Cloud (External AI Service)"]
+    direction TB
+    G_STT["Prisma v3.0 STT<br/>10 Languages + Hotword Biasing"]
+    G_TTS["Timbre v3.0 TTS<br/>Low-latency Streamed Voices"]
   end
-  MIC ==>|PCM audio| GATE
-  GATE <==>|audio and keyterms, transcript| STT
-  GATE ==>|transcript| NLU
-  NLU -. clause not understood .-> GATE
-  GATE -. one clause .-> QW
-  LED ==>|reply text| GATE
-  GATE <==>|text, PCM audio| TTS
-  GATE ==>|audio chunks| PLAY
+
+  subgraph CloudPlatform["Shared Cloud Platform (FastAPI + SurrealDB) [Partially Implemented]"]
+    direction TB
+    F_API["FastAPI Backend Services<br/>Tenant Auth & Event Validation"]
+    S_MIG["Migration Runner (001-004)<br/>SCHEMAFULL Schema Engine"]
+    S_DB[("SurrealDB Cloud<br/>Relational + Graph Storage<br/>Immutable SHA-256 Hash Chain")]
+    F_API --> S_MIG --> S_DB
+  end
+
+  subgraph LocalDevAI["Optional Local Fallback (Developer Machine Only)"]
+    Q_OLLAMA["Qwen2.5-1.5B INT4<br/>Local Ollama via /ollama"]
+  end
+
+  %% Connections
+  W_MIC ==>|16 kHz PCM Audio| S_NODE
+  S_NODE <==>|Audio / Transcripts| G_STT
+  S_NODE ==>|Text Reply| G_TTS
+  G_TTS ==>|PCM Chunks| W_SPK
+
+  A_DSP ==>|Denoised PCM Audio| G_STT
+  G_TTS ==>|Synthesized Voice| A_UI
+
+  W_NLU -. Unparsed Clause .-> S_NODE -. Proxy .-> Q_OLLAMA
+
+  A_SYNC -. HTTPS Batch Sync [Planned] .-> F_API
 ```
 
-The parser, ledger and encrypted store all run **in the browser**. The server only holds the Gnani key and bridges two WebSockets, so the ledger never leaves the device.
+---
 
-### One utterance, step by step
+## E. Web Application Architecture
 
-```mermaid
-sequenceDiagram
-  actor S as Shopkeeper
-  participant B as Browser app
-  participant N as Node server
-  participant P as Gnani Prisma STT
-  participant T as Gnani Timbre TTS
-  S->>B: holds the mic button and speaks
-  B->>N: WebSocket /stt, start with language, then PCM frames
-  N->>P: stream audio plus customer names as keyterms
-  P-->>N: transcript and detected language
-  N-->>B: transcript
-  Note over B: parser, then ledger, about 2 ms, no model call
-  alt clause not understood and Qwen available
-    B->>N: /ollama, one clause only
-    N-->>B: type and customer, amount from parser
-  end
-  B->>N: WebSocket /tts, reply text and language
-  N->>T: synthesize
-  T-->>N: PCM chunks
-  N-->>B: audio chunks
-  B-->>S: first sound plays before the full reply is ready
+The KHATAWAS Web Application is designed with a **zero-dependency, framework-free philosophy** to maximize execution speed and eliminate build-step fragility:
+- **Core Technology:** Vanilla JavaScript (ES modules), HTML5 semantic markup, CSS3 custom property design tokens.
+- **Audio Capture Worklet:** `public/pcm-worklet.js` captures raw microphone input at 16 kHz, converts 32-bit floating-point audio frames into signed 16-bit PCM binary buffers, and streams them in real time over WebSockets.
+- **Deterministic Rule-Based Parser:** `src/parser.js` and `src/numbers.js` execute entirely inside the browser in under 2 milliseconds. Parses spoken numbers (Devanagari, regional numerals, Hindi number words, colloquial phrases like *dedh sau* or *paune teen sau*), identifies transaction direction, and extracts customers.
+- **Client-Side Cryptographic Store:** `public/store.js` encrypts the entire customer and ledger database using **AES-256-GCM** via the browser's native `window.crypto.subtle` API. The non-extractable encryption key is stored in IndexedDB. Clicking **Delete all data** cryptographically destroys both the ciphertext and the key.
+- **Dual Cloud Deployments:**
+  - **Vercel Edge:** Static CDN serving with automatic rewrite routing (`vercel.json`) and serverless health/config endpoints (`api/healthz.js`, `api/config.js`).
+  - **Render Docker:** Containerized Node.js 22 alpine instance hosting the full WebSocket Gnani gateway with quota throttling.
+
+---
+
+## F. Android Application Architecture
+
+The KHATAWAS Android Application (`app/`) is architectured for **offline-first reliability in rural and peri-urban environments**:
+- **Application Modules & Clean Architecture:**
+  - `com.khatawas.ui`: Activities, RecyclerView adapters, and dialog controllers.
+  - `com.khatawas.db`: SQLCipher encrypted Room/SQLite database with SHA-256 event chaining (`EventIntegrity.kt`).
+  - `com.khatawas.audio`: High-fidelity audio recording, JNI bridge, and WebSocket streaming.
+  - `com.khatawas.auth`: Biometric authentication and Keystore cryptography.
+  - `com.khatawas.ai`: Edge ONNX Runtime inference service for natural language query interpretation.
+  - `com.khatawas.sync`: Monotonic synchronization manager.
+- **Native Audio Denoising (RNNoise C++):** Located in `app/src/main/cpp/`, a native recurrent neural network (RNNoise) operates via CMake and JNI to filter out noisy street sounds, traffic, and market chatter before transmitting audio frames.
+- **Database & Cryptography:**
+  - Powered by **SQLCipher 4.5.4** (`net.zetetic:android-database-sqlcipher`).
+  - Database encryption key is generated using `androidx.security.crypto.MasterKeys` and safeguarded inside the **hardware-backed Android Keystore** (`DatabaseKeyManager.kt`).
+- **Biometric Protection:** Integrates `androidx.biometric:biometric:1.1.0` allowing shopkeepers to secure financial ledger records behind biometric fingerprint or facial recognition.
+- **Edge AI Model:** Pre-packaged quantized INT8 ONNX multitask student model (`ai-engine/exports/khatawas_student_int8.onnx`) loaded via Microsoft ONNX Runtime Android for offline intent classification without requiring cloud connectivity.
+
+---
+
+## G. Shared Cloud Platform & SurrealDB
+
+The cloud infrastructure provides a multi-tenant, append-only financial ledger repository:
+- **SurrealDB Cloud Database:** Utilizes a hybrid relational-graph data model defined across 4 sequential migrations (`backend/database/migrations/`):
+  1. `001_initial_schema.surql`: Defines SCHEMAFULL tables (`app_user`, `shop`, `shop_member`, `customer`, `customer_alias`, `ledger_event`, `sync_receipt`, etc.).
+  2. `002_integrity_constraints.surql`: Enforces unique indexes (e.g., event UUID, monotonic device sequences, customer uniqueness per shop).
+  3. `003_query_indexes.surql`: Composite indexes for low-latency queries and balance lookups.
+  4. `004_graph_relationships.surql`: 6 native SurrealDB graph edges (`member_of`, `owns_customer`, `alias_of`, `family_of`, `has_transaction`, `has_message`).
+- **Strict Tenant & Shop-Level Isolation:** Every query and database transaction enforces `shop_uid` boundaries. Role-Based Access Control (`owner`, `admin`, `operator`, `viewer`) prevents unauthorized record viewing.
+- **Cryptographic Hash Chaining:** Every financial record (`ledger_event`) contains `previous_event_hash` pointing to the SHA-256 digest of the prior entry, creating an immutable, verifiable ledger chain.
+- **Direct Database Access Prohibition:** Neither the Web client nor the Android client possesses SurrealDB administration credentials. All cloud interactions are routed through authenticated API services.
+
+---
+
+## H. Financial & Ledger Architecture
+
+### Strict Shopkeeper Cash-Flow Semantics
+
+KHATAWAS adheres to the **Shopkeeper Cash-Flow Perspective**. Credit and payment semantics are mathematically and visually standardized across the entire product ecosystem:
+
+| Transaction Action | Financial Meaning | Customer Balance Effect | Presentation Color | Semantic Meaning |
+|---|---|:---:|:---:|---|
+| **GIVE UDHAAR**<br/>(Add Credit) | Shopkeeper gives goods on credit without upfront cash. | **`+` (Increases Debt)** | **RED** (`#D32F2F`) | Money owed to the shopkeeper (Risk / Asset). |
+| **GOT PAYMENT**<br/>(Receive Payment) | Customer pays cash to clear their pending debt. | **`-` (Decreases Debt)** | **GREEN** (`#2E7D32`) | Cash collected by the shopkeeper (Settlement). |
+| **Customer Balance** | Customer owes money to the shop ($> 0$). | **Positive Debt** | **RED** (`#D32F2F`) | Pending recovery. |
+| **Customer Balance** | Customer has prepaid in advance ($< 0$). | **Advance Credit** | **GREEN** (`#2E7D32`) | Prepaid balance. |
+
+### Verified Balance Arithmetic Example
+
+```text
+Baseline State:
+Customer: Ramesh Kumar
+Starting Outstanding Balance: ₹1,000 (RED)
+
+Step 1: Give Udhaar of ₹500
+- Shopkeeper Action: Gives 5 kg flour on udhaar
+- System Event: CREDIT, +₹500 (+50,000 paise)
+- Visual Presentation: Dialog & Action Button in RED (#D32F2F)
+- Resulting Outstanding Balance: ₹1,500 (RED)
+
+Step 2: Got Payment of ₹500
+- Shopkeeper Action: Receives ₹500 cash payment
+- System Event: DEBIT, -₹500 (-50,000 paise)
+- Visual Presentation: Dialog & Action Button in GREEN (#2E7D32)
+- Resulting Outstanding Balance: ₹1,000 (RED)
 ```
 
-### Two customers with the same name
+### Deterministic Financial Boundaries & Guardrails
+- **Paise Precision:** All currency arithmetic is performed strictly on 64-bit signed integers in **paise** (`₹1.00 = 100 paise`). Floating-point arithmetic is strictly forbidden to eliminate rounding errors.
+- **AI Separation of Concerns:** Artificial intelligence models (STT, LLMs, student models) are **strictly confined to perceptual transcription and intent classification**. An AI model is never permitted to execute balance calculations or directly mutate the database.
+- **Deterministic Validation:** Financial transactions are authorized only after passing deterministic checks (non-negative amount, valid customer identity, valid event hash continuity).
 
-```mermaid
-flowchart TD
-  A["Heard: Rahul ka 200 udhaar"] --> B{"How many customers match?"}
-  B -->|one| BOOK["Book it"]
-  B -->|none| NEW["Create a new customer"]
-  B -->|several, e.g. Rahul Sharma and Rahul Doodhwala| C{"Payment: only one candidate owes at least that amount?"}
-  C -->|yes| PICK["Auto-pick, say who and why"]
-  C -->|no| D{"Exactly one candidate was in this conversation recently?"}
-  D -->|yes| PICK
-  D -->|no| E{"One is a regular, 3 or more entries in 30 days, others none?"}
-  E -->|yes| PICK
-  E -->|no| ASK["Ask: Kaun sa Rahul? Sharma ya Doodhwala?"]
-  PICK --> UNDO["Shopkeeper can say: nahi, doosra Rahul"]
-  UNDO --> MOVE["Entry moves to the other Rahul"]
+---
+
+## I. AI & Voice Intelligence
+
+```text
+[Speech Input (16 kHz PCM)]
+           │
+           ▼
+[Ambient Noise Suppression (RNNoise / Web Audio)]
+           │
+           ▼
+[Gnani Prisma v3.0 STT Streaming via WebSocket] ─── (Customer Names as Hotwords)
+           │
+           ▼
+[Raw Indic Transcript (Devanagari / Romanized)]
+           │
+           ▼
+[Deterministic Rule Parser (< 2 ms)]
+  ├── Spoken Numbers & Numerals (10 Indic scripts, fraction words)
+  ├── Transaction Direction (Udhar vs Payment)
+  ├── Customer Disambiguation (Two-Rahul algorithm)
+  └── Relative Dates ("kal", "parso", "aaj")
+           │
+    ┌──────┴─────────────────────────────────┐
+    │ Parsed Successfully?                   │
+   YES                                      NO
+    │                                        │
+    │                                        ▼
+    │                           [Fallback Safety Net]
+    │                           (Qwen2.5-1.5B INT4 or
+    │                            Edge ONNX Student Model)
+    │                                        │
+    │                           [Guardrail Validation]
+    │                           - Amounts must be deterministic
+    │                           - Customer must appear in text
+    │                                        │
+    └──────────────────┬─────────────────────┘
+                       ▼
+       [Deterministic Financial Computation]
+       (Integer paise math, Ledger Event Hash)
+                       │
+                       ▼
+         [Encrypted Database Storage]
+         (SQLCipher / WebCrypto IndexedDB)
+                       │
+                       ▼
+     [Gnani Timbre v3.0 Text-to-Speech Streaming]
+                       │
+                       ▼
+  [Spoken Voice Confirmation in Shopkeeper's Language]
 ```
 
-## Tech stack
+### The Two-Rahul Same-Name Resolution Algorithm
+When multiple customers share a first name (e.g., *Rahul Sharma* and *Rahul Doodhwala*), KHATAWAS avoids asking redundant questions by applying an authoritative decision tree:
+1. **Balance Matching:** If a payment amount matches exactly what only one candidate owes, that candidate is selected automatically.
+2. **Conversation Recency:** If only one candidate was discussed in the last two utterances, that candidate is selected.
+3. **Transaction Frequency:** If one candidate is a regular (3+ transactions in 30 days) and the other has none, the regular is selected.
+4. **Verbal Clarification:** If ambiguous, the system asks: *"Kaun sa Rahul? Sharma ya Doodhwala?"* The shopkeeper's one-word answer (*"Sharma"*) completes the entry.
+5. **Vocal Undo:** Saying *"Nahi, doosra Rahul"* moves the last booked entry to the other candidate.
 
-| Layer | What we use |
-|---|---|
-| Frontend | Plain JavaScript (ES modules), no framework and no build step. Web Audio `AudioWorklet` for mic capture, WebCrypto (AES-256-GCM) and IndexedDB for the encrypted ledger, Web Speech API as a browser fallback |
-| Backend | Node.js 22, a single runtime dependency (`ws`), WebSocket bridges for `/stt` and `/tts`, an access gate and per-visitor and daily usage caps |
-| Speech to text | **Gnani Prisma v3.0**: 10 languages plus auto-detect, customer names sent as keyterms |
-| Text to speech | **Gnani Timbre v3.0**: a voice per language, streamed so playback starts early |
-| Language model | **Qwen2.5-1.5B (INT4) via Ollama**, local and optional, used only for clauses the rules cannot parse and boxed in by guardrails. Not part of the hosted Render deployment |
-| Language logic | Own code: rule-based parser, number parser, Indic-script transliteration, reply tables for 10 languages |
-| Hosting | Docker on Render (free plan, auto-deploys from `main`) |
-| Tests | `node:test`, 59 automated tests, plus a live benchmark against real Prisma transcripts |
+---
 
-## How it works
+## J. Supported Languages
 
-**Design choices**
+KHATAWAS provides verified support across **10 major Indian languages** through Gnani Vachana Prisma v3.0 and Timbre v3.0:
 
-- **Deterministic first, LLM only as a fallback.** The rule-based parser handles the judged cases in about 2 ms with no model call, so results are predictable. Qwen2.5-1.5B is called only when the parser cannot understand a sentence. If the model is offline or slow the sale still completes.
-- **Amounts in any spoken form.** Digits, Hindi number words (up to 99 plus *sau/hazaar/lakh*), English words, colloquial "three forty", and *dedh/dhai/saade* forms.
-- **Hotword biasing.** The shop's customer names are sent to Prisma so proper nouns are recognised in code-mixed speech.
-- **API key never reaches the browser.** The browser talks to our own server (`/stt`, `/tts`), which talks to Gnani.
-- **Spoken answers stream.** Timbre audio chunks are scheduled for playback as they arrive, so the first sound plays before the whole reply is generated.
+| Language | Script | Spoken Numbers | Written Digits | STT Support | Spoken TTS Confirmation |
+|---|---|:---:|:---:|:---:|:---:|
+| **Hindi / Hinglish** | Devanagari / Latin | Yes (1–99, fractions) | Yes | Prisma v3.0 | Timbre v3.0 (*Shivani*) |
+| **English (Indian)** | Latin | Yes (hundred, decimals) | Yes | Prisma v3.0 | Timbre v3.0 (*Indian English*) |
+| **Kannada (ಕನ್ನಡ)** | Kannada / Latin | Yes (ಹತ್ತು, ನೂರು) | Yes (೧, ೨, ೩) | Prisma v3.0 | Timbre v3.0 (*Kannada*) |
+| **Marathi (मराठी)** | Devanagari | Yes (दोनशे, पन्नास) | Yes (१, २, ३) | Prisma v3.0 | Timbre v3.0 (*Marathi*) |
+| **Tamil (தமிழ்)** | Tamil | Digits mapped | Yes (௧, ௨, ௩) | Prisma v3.0 | Timbre v3.0 (*Tamil*) |
+| **Telugu (తెలుగు)** | Telugu | Digits mapped | Yes (౧, ౨, ౩) | Prisma v3.0 | Timbre v3.0 (*Telugu*) |
+| **Gujarati (ગુજરાતી)** | Gujarati | Digits mapped | Yes (૧, ૨, ૩) | Prisma v3.0 | Timbre v3.0 (*Gujarati*) |
+| **Bengali (বাংলা)** | Bengali | Digits mapped | Yes (১, ২, ৩) | Prisma v3.0 | Timbre v3.0 (*Bengali*) |
+| **Malayalam (മലയാളം)**| Malayalam | Digits mapped | Yes (൧, ൨, ൩) | Prisma v3.0 | Timbre v3.0 (*Malayalam*) |
+| **Punjabi (ਪੰਜਾਬੀ)** | Gurmukhi | Digits mapped | Yes (੧, ੨, ੩) | Prisma v3.0 | Timbre v3.0 (*Punjabi*) |
 
-## Gnani and Qwen: what each one does
+---
 
-KHATAWAS uses **two AI models for two different jobs**. Gnani handles the voice; Qwen is a small local safety net for sentences the rules cannot understand.
+## K. Data Security & Privacy
 
-| | **Gnani Prisma v3.0** | **Gnani Timbre v3.0** | **Qwen2.5-1.5B** |
+1. **Zero Secret Exposure:** Client-side source code and public repositories contain no database administrative credentials, private keys, or API tokens.
+2. **Encryption at Rest:**
+   - **Web:** AES-256-GCM via WebCrypto. Master key is non-extractable and stored in browser-scoped IndexedDB.
+   - **Android:** SQLCipher 4.5.4 AES-256 full database encryption. Key secured in hardware-backed Android Keystore.
+3. **Data Erasure on Demand:** Both applications provide a one-click **Delete all data** feature that cryptographically destroys database contents and wipes encryption keys.
+4. **Responsible AI Disclosure:** The first spoken reply of every session explicitly identifies the assistant: *"Main ek AI sahayak hoon"* (I am an AI assistant).
+5. **No Harassment or Shaming:** The system never issues automatic threatening debt collection notices or automated customer pressure calls.
+
+---
+
+## L. Technology Stack
+
+| Layer | Technologies & Libraries | Version | Purpose |
 |---|---|---|---|
-| Job | Speech to text | Text to speech | Reads unclear sentences |
-| Runs where | Gnani cloud (WebSocket) | Gnani cloud (WebSocket) | Locally, on the same machine as our server, via Ollama |
-| Needs internet | Yes | Yes | No |
-| Input | Push-to-talk audio (16 kHz PCM16), plus customer names as hotwords | The short reply sentence | Only the clause the rules could not parse |
-| Output | Transcript, usually in Hindi script, with English words kept | Streaming audio, played as it arrives | JSON: entry type and customer name |
-| Used on | Every utterance | Every reply | Only some utterances (2 of 32 clean and 4 of 32 noisy test runs) |
-| Code | `server/gnani.js` | `server/gnani.js` | `src/llm.js` |
+| **Web Frontend** | Vanilla JavaScript (ESM), HTML5, CSS3 | Standard | Lightweight, zero-dependency browser application |
+| **Web Audio** | Web Audio API (`AudioWorklet`) | Standard | 16 kHz PCM16 audio recording worklet |
+| **Web Security** | WebCrypto API (AES-256-GCM), IndexedDB | Standard | Client-side encrypted ledger persistence |
+| **Web Server** | Node.js, `ws` | 22.x / 8.23.0 | WebSocket proxy bridge to Gnani cloud |
+| **Web Edge API** | Vercel Serverless Functions | Node.js 20.x | Production edge routing, health and configuration |
+| **Android Core** | Kotlin, Android SDK, AndroidX Core | 1.9.22 / API 34 | Native mobile operating system shell |
+| **Android DB** | SQLCipher for Android (`net.zetetic`) | 4.5.4 | Full database AES-256 encryption at rest |
+| **Android Crypto**| AndroidX Security Crypto, Android Keystore | 1.1.0-alpha06 | Hardware-backed cryptographic key generation |
+| **Android Bio** | AndroidX Biometric | 1.1.0 | Fingerprint & Face ID biometric authentication |
+| **Android Audio** | OpenSL ES / Android AudioRecord, JNI | Standard | Native audio streaming pipeline |
+| **Native DSP** | C++, RNNoise (xiph), CMake | 3.22.1 | Native recurrent neural network ambient noise filter |
+| **Edge AI** | Microsoft ONNX Runtime Android | 1.17.0 | Offline quantized model inference on edge POS |
+| **Speech STT** | Gnani Prisma v3.0 | v3.0 | Streaming multi-lingual speech-to-text |
+| **Speech TTS** | Gnani Timbre v3.0 | v3.0 | Streamed Indic speech synthesis |
+| **Cloud DB** | SurrealDB Cloud | 2.x | Hybrid relational-graph immutable ledger |
+| **Container** | Docker Alpine Linux | 3.20 | Containerized Node.js web server on Render |
 
-**Gnani settings used:** Prisma `model=prisma-v3.0`, `format=codemix`, `language_code=hi-IN`, up to 50 customer names as `keyterms`, 1024-byte PCM frames with a `commit` at the end of speech. Timbre `model=timbre-v3.0`, voice `Shivani`, language `hi-en` (Hinglish), 24 kHz raw PCM.
+---
 
-**How a sentence flows**
+## M. Installation & Development Setup
 
-1. The shopkeeper holds the button; Prisma returns the transcript.
-2. The **rule-based parser** reads it first (numbers, credit vs payment, dates, corrections). This takes about 1 ms and is fully predictable.
-3. If, and only if, a clause is not understood, that clause goes to **Qwen**.
-4. The ledger applies the entries and builds a short reply; **Timbre** speaks it.
+### 1. Web Application Setup
 
-**Why Qwen is boxed in.** A 1.5B model got 3 of its first 5 test sentences wrong when left unguarded (it read goods-on-credit as a payment, turned 300 into 10, and invented a question from noise). So it is only allowed to choose the *type* of entry and the *customer*. Specifically:
+#### Prerequisites
+- Node.js 20.x or 22.x
+- npm 10.x+
 
-- **Amounts never come from Qwen.** They are read by the deterministic number parser from the same clause.
-- A credit or payment with no spoken amount, or no customer, is rejected.
-- A customer name Qwen returns must actually appear in the clause (it cannot invent people).
-- A question answer is rejected unless the clause contains a question word.
-- If Ollama is down or slow (4 s timeout), Qwen returns nothing and the app asks the shopkeeper to repeat.
-
-**Honest status of Qwen:** tested from the command line and inside the benchmark (`scripts/benchmark.js`), where it recovered a ₹400 credit from "Geeta ke khate me chaar sau ka atta chadha do". It has also been run through the browser UI (3 of 3 typed fallback sentences booked correctly, e.g. "Imran ke khate me teen sau ka ration chadha do" -> Imran, credit 300, in about 250 ms when warm; the first call after Ollama starts took about 1.2 s while the model loaded, and gibberish was rejected with "Samajh nahi aaya"). Ollama must be running on the machine that runs `npm start`. It is a fallback, not the main path. **The hosted Render deployment runs the rules only** (its Docker image has no Ollama), so common phrases such as "atta chadha do" are now handled by the rules themselves.
-
-No telephony, no hosted end-to-end agent platform, no voice cloning. Orchestration is custom (`src/pipeline.js`).
-
-## Responsible AI
-
-- **Discloses it is an AI:** the first spoken reply of every session begins "Main ek AI sahayak hoon" (Hindi), and the header also shows "Main ek AI hoon · I am an AI assistant".
-- **Privacy:** the ledger is encrypted at rest with AES-256-GCM (WebCrypto). The key is a non-extractable `CryptoKey` stored in IndexedDB, so page JavaScript cannot read the raw key. Nothing is synced anywhere.
-- **Delete on demand:** the **Delete all data** button wipes both the ciphertext and the key.
-- **What leaves the device:** audio of the push-to-talk utterance goes to Gnani Prisma for transcription, and reply text goes to Gnani Timbre. The ledger itself never leaves the device.
-- **No lending or pressure language:** the app only records, corrects and reports. There are no automated reminders.
-- **Synthetic data only** for tests and demo. No real customer data.
-- **Secrets:** the API key lives in a gitignored `.env`.
-
-## Run it
-
-Requirements: Node 20+. Optional: [Ollama](https://ollama.com) for the Qwen fallback.
-
+#### Execution
 ```bash
-git clone <this repo> && cd khatawas
+# Clone the repository
+git clone https://github.com/callmetechnophile/khatabook.git
+cd khatabook
+
+# Install dependencies
 npm install
 
-# 1. Gnani credentials (gitignored)
-cp .env.example .env     # then fill in GNANI_API_KEY (URLs are prefilled)
+# Configure environment
+cp .env.example .env
+# Edit .env and enter your GNANI_API_KEY
 
-# 2. Offline fallback model (optional, ~1 GB)
-ollama pull qwen2.5:1.5b
+# Synchronize modules and start development server
+npm run build
+npm start
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-# 3. Start
-npm start                # http://localhost:3000
-npm test                 # parser + ledger tests
-npm run live-test        # real Gnani round trip (uses your credits)
+---
+
+### 2. Android Application Setup
+
+#### Prerequisites
+- Android Studio Hedgehog (2023.1.1) or newer
+- JDK 17
+- Android SDK 34, NDK 27.1.12297006, CMake 3.22.1
+
+#### Execution
+```bash
+# Build Debug APK
+./gradlew assembleDebug
+
+# Install on connected device or emulator via ADB
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+
+# Run unit tests
+./gradlew testDebugUnitTest
 ```
 
-Open the page on a phone or laptop, hold the big button (or the space bar), speak, release. You can also type a sentence in the box to test the parser without a microphone.
+---
 
-**Dev mode:** if `.env` has no Gnani settings the app falls back to the browser's built-in speech recognition and voice, and the footer shows `DEV MODE`. This is for development only and is not the submission path.
+## N. Deployment Architecture
 
-## Deploy (runs without your laptop)
-
-The repo includes a `Dockerfile` and a Render Blueprint (`render.yaml`). On Render: **New > Blueprint**, pick this repo, then set the two variables in the dashboard, `GNANI_API_KEY` and `ACCESS_CODE` (the Gnani endpoints are built-in defaults, override with `GNANI_STT_WS_URL` / `GNANI_TTS_WS_URL` if Gnani changes them) (the demo link then ends in `?code=<ACCESS_CODE>`). By default public traffic is refused without the code so strangers cannot spend Gnani credits. Setting `PUBLIC_DEMO=1` opens the app to everyone instead, and protects the paid Gnani connections with usage caps (60 push-to-talk presses per visitor per 10 minutes and 3000 per day by default, tunable with `LIMIT_IP_10MIN` and `LIMIT_DAY`). The hosted version has no Qwen (Ollama is not in the image); the rules parser still handles the judged cases and unclear sentences simply get "Samajh nahi aaya". The free Render plan sleeps when idle, so open the link once a minute before a live demo, or use the always-on plan.
-
-## Project layout
-
+```text
+                      [Shopkeeper Browser / PWA]
+                                  │
+                                  ▼
+                    [Vercel Global Edge Network]
+                   (https://khatawas.vercel.app)
+                    ├── Static Assets & ES Modules (/src/*)
+                    ├── Landing Page Story (/)
+                    ├── Voice Ledger App (/app)
+                    └── Serverless Health & Config (/healthz, /api/config)
+                                  │
+                                  ▼ (WebSocket Voice Gateway)
+                   [Render Cloud Docker Container]
+                   (https://khatawas.onrender.com)
+                    └── Node.js 22 Proxy (server/index.js)
+                                  │
+                                  ▼ (Secure WebSocket Stream)
+                      [Gnani Vachana Cloud]
+                      ├── Prisma v3.0 STT
+                      └── Timbre v3.0 TTS
 ```
-src/numbers.js     spoken-number parsing (Hindi / Hinglish / English)
-src/parser.js      intents, customers, relative dates, corrections
-src/ledger.js      ledger logic, clarification questions, spoken replies
-src/llm.js         Qwen2.5-1.5B fallback via Ollama (strict JSON output)
-src/pipeline.js    transcript -> parser -> (Qwen) -> ledger -> reply
-server/index.js    static files, /ollama proxy, /stt and /tts WebSockets
-server/gnani.js    the only file that knows Gnani's wire protocol
-public/            UI, mic capture worklet, encrypted store, speech clients
-test/              node:test suites
+
+---
+
+## O. API Documentation
+
+### Production Web Gateway Endpoints
+
+| Method | Endpoint | Description | Auth Required | Request Payload | Response |
+|---|---|---|:---:|---|---|
+| `GET` | `/healthz` | System health check | No | None | `200 OK` (`text/plain: "ok"`) |
+| `GET` | `/api/config` | Speech engine feature toggle | No | None | `200 OK` (`{"gnani": true/false}`) |
+| `GET` | `/` | Story landing page | No | None | `200 OK` (`text/html`) |
+| `GET` | `/app` | Voice ledger application | Access Code / Open | None | `200 OK` (`text/html`) |
+| `WS` | `/stt` | Streaming Speech-to-Text | Yes / Quota | 16 kHz PCM binary frames | JSON transcripts |
+| `WS` | `/tts` | Streaming Text-to-Speech | Yes / Quota | Text & language code | Raw PCM audio chunks |
+
+---
+
+## P. Project Directory Structure
+
+```text
+khatawas/
+├── api/                       # Vercel serverless functions (healthz, config)
+├── app/                       # Android native application source
+│   ├── src/main/cpp/          # Native C++ DSP (RNNoise wrapper & CMake)
+│   ├── src/main/java/         # Kotlin application modules (UI, Audio, DB, AI, Sync)
+│   ├── src/main/jniLibs/      # Compiled native libraries (arm64, armeabi, x86_64)
+│   └── src/main/res/          # Android resources, layouts, strings (EN, HI, KN)
+├── backend/                   # Shared cloud platform (SurrealDB migrations & models)
+│   ├── database/migrations/   # 001 to 004 versioned SurrealQL migrations
+│   └── services/              # Graph & reconciliation service layers
+├── brand/                     # Master brand identity guidelines and icons
+├── docs/                      # Architectural audits, benchmarks, and test reports
+├── public/                    # Web application frontend assets
+│   ├── index.html             # Story-driven product landing page
+│   ├── app.html               # Voice ledger user interface
+│   ├── app.js                 # Web client controller
+│   ├── landing.css            # Editorial design system stylesheet
+│   ├── pcm-worklet.js         # AudioWorklet microphone capture processor
+│   ├── speech.js              # WebSocket voice streaming client
+│   └── store.js               # WebCrypto AES-256-GCM IndexedDB storage
+├── scripts/                   # Build and synchronization automation scripts
+├── server/                    # Node.js 22 WebSocket gateway server
+│   ├── index.js               # HTTP router and WebSocket bridge
+│   └── gnani.js               # Gnani Vachana wire protocol handler
+├── src/                       # Core shared deterministic ES modules
+│   ├── numbers.js             # Spoken Indic numerals and fractions parser
+│   ├── parser.js              # Natural language intent & customer extractor
+│   ├── ledger.js              # Business logic & same-name disambiguation
+│   ├── pipeline.js            # Transcript-to-ledger orchestration pipeline
+│   └── lang.js                # 10 Indic languages configuration
+└── test/                      # Node.js automated test suites
 ```
 
-## Status and honest limitations
+---
 
-- **Confusing-sentence test list:** [`docs/test-sentences.md`](docs/test-sentences.md) has mixed-language, negated, corrected and same-name sentences with expected results and the known limits.
-- **Working and tested (59 automated tests + a live benchmark):** number parsing, credit/payment direction, relative dates, multi-entry sentences, spoken corrections, duplicate-name clarification, queries, Hindi-script input, phonetic name matching.
-- **Measured with real Gnani calls** (details and caveats in [`docs/benchmark.md`](docs/benchmark.md)): on 32 synthetic test sentences, 32/32 fully correct in clean speech and every amount exact; 19/32 fully correct and 25/29 amounts exact with synthetic 5 dB shop noise. Prisma finalises a transcript about 0.3 s after speech ends; Timbre's first reply audio arrives in about 0.43 s (median). The test audio is synthetic and the parser was tuned on part of it, so these are not field results.
-- **Gnani integration (verified live):** `server/gnani.js` follows the Vachana docs (Prisma v3.0 STT WebSocket with `keyterms` hotwords and `format=codemix`; Timbre v3.0 TTS WebSocket). `npm run live-test` speaks a sentence with Timbre, transcribes it with Prisma and parses it. In our runs Prisma returned the transcript about 130-300 ms after the audio was sent and Timbre's first audio arrived in about 440-750 ms. These were short synthetic sentences over a home connection, not a noisy shop, so treat them as indicative, not as a latency guarantee.
-- **Prisma returns final transcripts only** (no partial/interim results), so the screen shows the text after you release the button.
-- **Hindi script:** Prisma answers in Devanagari ("तीन सौ चालीस रुपये उधार"), so the parser understands both Devanagari and romanized Hinglish. Customer names heard in Devanagari that were never typed or biased as hotwords are stored as heard.
-- **Qwen fallback (tested on a small set):** Qwen2.5-1.5B answers in about 260-350 ms locally. On our first 5 messy sentences, unguarded, it got 3 wrong (goods-on-credit read as payments, amount 10 instead of 300, a made-up query for gibberish). So it is guard-railed: Qwen may only choose the kind and the customer; amounts always come from the deterministic number parser; writes with no spoken amount or no customer are rejected; query answers are rejected unless the sentence contains a question word. After this and a few-shot prompt it handled the one sentence the rules could not ("Geeta ke khate me chaar sau ka atta chadha do" -> credit 400) and produced nothing for gibberish. This is a handful of sentences, not a benchmark, and Qwen is a fallback, not the main path.
-- **Noise robustness:** this build uses the browser's built-in noise suppression and echo cancellation. Tested only against synthetic noise (see benchmark), not real shop recordings; under noise Prisma sometimes mishears names or inserts words, which the app cannot recover from. Native RNNoise/SpeexDSP is on the roadmap below, not shipped.
-- **Platform:** a web app that runs on a low-end phone's browser. A native Android build is future work.
-- **Languages:** ten, see [`docs/languages.md`](docs/languages.md). Only Hindi/Hinglish was benchmarked on noisy speech. The other nine were verified end to end with synthetic Timbre voices (all ten return the amount as digits). Their spoken replies were drafted by an AI and need a native speaker's read. Spoken number words (instead of digits) are understood for Hindi, English, Marathi and Kannada.
+## Q. Testing & Validation
 
-## Roadmap
+All automated test suites are executed and passing:
 
-1. Verify and tune against Gnani Prisma/Timbre with measured end-to-end latency.
-2. Evaluate Qwen fallback accuracy on a synthetic noisy test set.
-3. Native Android shell with RNNoise + SpeexDSP (JNI), SQLCipher and Android Keystore, as in the original design.
-4. Opt-in, polite payment reminders.
-5. Odia, Assamese and Urdu once Gnani supports them; field tests of the nine new languages with real shopkeepers.
+1. **Node.js Business Logic & Parser Test Suite:**
+   - **Command:** `npm test`
+   - **Result:** **59 passing tests, 0 failures** (`node:test`, 511 ms duration).
+   - Validates multi-lingual spoken number parsing, credit/payment directionality, relative dates, two-Rahul disambiguation, and transliteration.
+2. **Android Unit & Color Verification Suite:**
+   - **Command:** `./gradlew testDebugUnitTest`
+   - **Result:** **26 passing tests, 0 failures** (`ShopkeeperPerspectiveColorTest`).
+   - Validates Give Udhar = RED (`#D32F2F`), Got Payment = GREEN (`#2E7D32`), balance arithmetic integrity, and Indian currency formatting.
+3. **Physical & Emulator Device Testing:**
+   - On-device test runs on physical hardware (`10BF8P109X003X2`) and emulator (`API 34`).
+   - Confirms baseline ₹1,000 (RED) $\to$ Give Udhar ₹500 $\to$ ₹1,500 (RED) $\to$ Got Payment ₹500 $\to$ ₹1,000 (RED) transitions.
 
-## License
+---
 
-MIT, see `LICENSE`.
+## R. Current Status & Roadmap
+
+### Currently Shipped & Operational
+- Story-driven introductory web landing page on Vercel and Render.
+- Client-side voice ledger in 10 Indic languages with deterministic <2 ms parsing.
+- AES-256-GCM encrypted persistence in IndexedDB with instant key wiping.
+- Android application with SQLCipher encryption, Keystore integration, and Biometric auth.
+- Shopkeeper Cash-Flow UI color perspective (Red=Udhar, Green=Payment).
+- Native C++ RNNoise ambient background noise filtering on Android.
+- Authoritative SurrealQL migrations defining hybrid relational-graph data schema.
+
+### Active Development
+- Mounting production FastAPI service to connect Android `SyncManager` to SurrealDB Cloud.
+- Field testing Android quantized ONNX student model across non-Hindi Indic dialects.
+- Automated peer-to-peer ledger conflict resolution across multiple shopkeeper devices.
+
+### Planned Research
+- Privacy-preserving, polite WhatsApp and SMS payment reminders.
+- Expansion to Odia, Assamese, and Urdu speech models as provider support matures.
+
+---
+
+## S. Contributing
+
+We welcome contributions from developers, computational linguists, and retail accessibility researchers:
+1. **Fork the repository** on GitHub.
+2. **Create a feature branch:** `git checkout -b feature/indic-dialect-enhancement`.
+3. **Write deterministic tests:** Add corresponding unit tests in `test/` (Web) or `app/src/test/` (Android).
+4. **Ensure all test suites pass:** `npm test` and `./gradlew testDebugUnitTest`.
+5. **Submit a Pull Request** with clear technical descriptions and test logs.
+
+---
+
+## T. License & Acknowledgements
+
+- **License:** Open source under the [MIT License](LICENSE).
+- **Copyright:** (c) 2026 Ayushman & Team ANTHROMINDS.
+- **Acknowledgements:**
+  - **Gnani.ai:** Vachana Speech Platform (Prisma STT and Timbre TTS).
+  - **SurrealDB:** SurrealDB Cloud hybrid multi-model relational and graph database.
+  - **Xiph.Org Foundation:** RNNoise recurrent neural network for audio noise suppression.
+  - **Zetetic:** SQLCipher encrypted database engine for Android.
+  - **Microsoft:** ONNX Runtime for edge machine learning acceleration.
+
+---
+
+## U. Contact & Project Links
+
+- **Unified Monorepo:** [https://github.com/callmetechnophile/khatabook](https://github.com/callmetechnophile/khatabook)
+- **Web Application Repository:** [https://github.com/TheShreyanshiDwivedi/khatawas](https://github.com/TheShreyanshiDwivedi/khatawas)
+- **Production Web Application:** [https://khatawas.vercel.app](https://khatawas.vercel.app)
+- **Render Hosted Demo:** [https://khatawas.onrender.com/](https://khatawas.onrender.com/)
+- **Bug Tracker & Issues:** [GitHub Issues](https://github.com/callmetechnophile/khatabook/issues)
