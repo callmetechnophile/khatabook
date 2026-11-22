@@ -62,3 +62,49 @@ All screenshots captured from the runtime test are archived under `docs/screensh
 6. `docs/screenshots/06_got_payment_500_result_500_green.png` — Final balance decreased to ₹500.
 7. `docs/screenshots/07_customers_tab_verified.png` — Customers directory verifying debtor (RED) and advance (GREEN).
 8. `docs/screenshots/08_history_tab_verified.png` — History tab verifying CREDIT (RED) and PAYMENT (GREEN).
+
+---
+
+## 5. Language Settings UI State Synchronization Verification
+
+### 5.1 Problem Statement & Root Cause
+Prior to this fix, selecting a language on the Settings screen updated application resources and translated interface strings, but the language selector controls failed to visually indicate the active language (e.g. selecting Kannada showed Kannada text across the app, but English remained visually selected or no indicator was checked).
+- **Root Cause**: The language selector buttons/radio buttons were not bound to an authoritative reactive state source of truth, lacked bidirectional state propagation upon Activity recreation, and tab state was lost during configuration changes.
+
+### 5.2 Architecture: `LanguageManager` as Single Source of Truth
+1. **Authoritative State Singleton**: `com.khatawas.util.LanguageManager` manages the active language (`en`, `hi`, `kn`), persisting choices synchronously via `SharedPreferences` (`apply()` / `commit()`).
+2. **Context Wrapping & Resource Application**:
+   - `wrapContext(context)` applies the selected `LocaleList` at the `attachBaseContext` level for API 24+ compatibility.
+   - `applyToResources(resources, context)` guarantees runtime resource configuration synchronization.
+3. **Reactive UI State Flow**:
+   - `currentLanguageFlow: StateFlow<String>` provides reactive emissions whenever language state shifts.
+   - Selection UI maintains listener detachment/reattachment during updates to prevent circular event cascades.
+4. **Lifecycle & Tab State Preservation**:
+   - `onSaveInstanceState` and `onCreate` preserve active tab (`KEY_ACTIVE_TAB`), preventing tab reset during `recreate()`.
+   - `onResume()` synchronizes the UI controls with `LanguageManager.getLanguage()`.
+
+### 5.3 Automated Unit Tests (`LanguageManagerTest.kt`)
+Ran 8 dedicated unit tests with `gradlew testDebugUnitTest`:
+1. `testDefaultLanguageIsEnglish` — Verifies clean-state default to English (`en`).
+2. `testSetLanguageHindi` — Verifies Hindi persistence and state reflection.
+3. `testSetLanguageKannada` — Verifies Kannada persistence and state reflection.
+4. `testTransitionCycleEnglishToHindiToKannadaToEnglish` — Validates complete language transition loops without state drift.
+5. `testPersistenceSurvivesProcessRestartSimulation` — Simulates app termination and verifies saved preferences reload correctly.
+6. `testUnsupportedLanguageFallsBackToEnglish` — Gracefully degrades unsupported locales to English.
+7. `testRapidRepeatedSelectionStability` — Rapid consecutive changes without race conditions or memory corruption.
+8. `testSupportedLanguagesIntegrity` — Validates `SUPPORTED_LANGUAGES` set integrity.
+**Result**: **32 total project tests passing, 0 failures, 100% success rate.**
+
+### 5.4 Live On-Device ADB Test Suite (`emulator-5554`)
+The on-device test suite executed against `com.khatawas` on Android 14 (`emulator-5554`):
+
+| Test Case | Description | Verification Method | Status | Evidence |
+|---|---|---|---|---|
+| **Test 1** | English Baseline | Inspect UI hierarchy on Settings tab; verify `rb_lang_en.isChecked == true`. | **PASS** | `docs/screenshots/lang_01_english_active.png` |
+| **Test 2** | EN $\to$ HI Transition | Tap Hindi option; verify `recreate()`, `rb_lang_hi.isChecked == true`, and Hindi strings displayed. | **PASS** | `docs/screenshots/lang_02_hindi_active.png` |
+| **Test 3** | HI $\to$ KN Transition | Tap Kannada option; verify `rb_lang_kn.isChecked == true`, strings displayed in Kannada script. | **PASS** | `docs/screenshots/lang_03_kannada_active.png` |
+| **Test 4** | KN $\to$ EN Transition | Tap English option; verify complete restoration of English language and `rb_lang_en.isChecked == true`. | **PASS** | `docs/screenshots/lang_04_english_restored.png` |
+| **Test 5** | Process Restart Persistence | Set to Kannada $\to$ force-stop app (`am force-stop`) $\to$ cold launch app $\to$ verify Kannada persists. | **PASS** | `docs/screenshots/lang_05_restart_persistence_kannada.png` |
+| **Test 6** | Navigation Persistence | Set to Hindi $\to$ navigate through all 5 tabs (Home, Customers, History, Settings) $\to$ verify Hindi intact. | **PASS** | `docs/screenshots/lang_06_navigation_persistence_hindi.png` |
+| **Test 7** | Rapid Selection Stability | Rapid taps EN $\to$ HI $\to$ KN $\to$ HI in rapid succession; verify zero crashes and single checked state. | **PASS** | `docs/screenshots/lang_07_rapid_selection_stable.png` |
+
