@@ -1,0 +1,1188 @@
+{
+  "summary": {
+    "clean": {
+      "sentences": 24,
+      "fullyCorrect": 17,
+      "amountExact": 17,
+      "amountTotal": 22,
+      "directionRight": 19,
+      "sttAfterEndMs_p50": 306,
+      "sttAfterEndMs_p95": 452,
+      "parseMs_max": 10.42,
+      "qwenUsed": 5
+    },
+    "noisy": {
+      "sentences": 24,
+      "fullyCorrect": 9,
+      "amountExact": 15,
+      "amountTotal": 22,
+      "directionRight": 14,
+      "sttAfterEndMs_p50": 290,
+      "sttAfterEndMs_p95": 503,
+      "parseMs_max": 1.15,
+      "qwenUsed": 6
+    },
+    "replyFirstAudioMs_p50": 460,
+    "replyFirstAudioMs_p95": 681,
+    "replySamples": 10,
+    "snrDb": 5,
+    "date": "2026-11-21"
+  },
+  "results": [
+    {
+      "mode": "clean",
+      "say": "Ramesh ka teen sau chaalis rupaye udhaar",
+      "heard": "Ramesh का तीन सौ चालीस रुपए उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "ramesh"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "ramesh"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 10.42,
+      "qwenMs": 0,
+      "sttAfterEndMs": 231
+    },
+    {
+      "mode": "clean",
+      "say": "Sunita ka paanch sau udhaar",
+      "heard": "Sunita का पाँच सौ उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 500,
+          "customer": "sunita"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 500,
+          "customer": "sunita"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 6.27,
+      "qwenMs": 0,
+      "sttAfterEndMs": 272
+    },
+    {
+      "mode": "clean",
+      "say": "Mohan ka ek hazaar do sau udhaar",
+      "heard": "मोहन का एक हजार दो सौ उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 1200,
+          "customer": "mohan"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 1200,
+          "customer": "मोहन"
+        }
+      ],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 3.72,
+      "qwenMs": 0,
+      "sttAfterEndMs": 410
+    },
+    {
+      "mode": "clean",
+      "say": "Geeta ka dedh sau udhaar",
+      "heard": "Geeta का डेढ़ सौ उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 150,
+          "customer": "geeta"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 150,
+          "customer": "geeta"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.61,
+      "qwenMs": 0,
+      "sttAfterEndMs": null
+    },
+    {
+      "mode": "clean",
+      "say": "Imran ka dhai sau udhaar",
+      "heard": "Imran का ढाई सौ उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 250,
+          "customer": "imran"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 250,
+          "customer": "imran"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.67,
+      "qwenMs": 0,
+      "sttAfterEndMs": 246
+    },
+    {
+      "mode": "clean",
+      "say": "Anil ka saade teen sau udhaar",
+      "heard": "अनिल का सादे तीन सौ उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 350,
+          "customer": "anil"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 300,
+          "customer": "अनिल"
+        }
+      ],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.62,
+      "qwenMs": 0,
+      "sttAfterEndMs": 356
+    },
+    {
+      "mode": "clean",
+      "say": "Pooja ka 340 rupaye udhaar",
+      "heard": "Pooja का three hundred forty रुपये उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "pooja"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "pooja"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.72,
+      "qwenMs": 0,
+      "sttAfterEndMs": 240
+    },
+    {
+      "mode": "clean",
+      "say": "Kavita ka three hundred forty rupees udhaar",
+      "heard": "Kavita का three hundred forty rupees उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "kavita"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "kavita"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.63,
+      "qwenMs": 0,
+      "sttAfterEndMs": 452
+    },
+    {
+      "mode": "clean",
+      "say": "Ramesh ne do sau rupaye diye",
+      "heard": "Ramesh ne do sau rupaye diye.",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 200,
+          "customer": "ramesh"
+        }
+      ],
+      "got": [
+        {
+          "kind": "payment",
+          "amount": 200,
+          "customer": "ramesh"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 5.26,
+      "qwenMs": 0,
+      "sttAfterEndMs": 182
+    },
+    {
+      "mode": "clean",
+      "say": "Sunita ne paanch sau wapas kiye",
+      "heard": "Sunita ने पाँच सौ वापस किए।",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 500,
+          "customer": "sunita"
+        }
+      ],
+      "got": [
+        {
+          "kind": "payment",
+          "amount": 500,
+          "customer": "sunita"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 2.89,
+      "qwenMs": 0,
+      "sttAfterEndMs": 306
+    },
+    {
+      "mode": "clean",
+      "say": "Mohan ka sau rupaye jama kar do",
+      "heard": "मोहन, का सौ रुपये जमा कर दो।",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 100,
+          "customer": "mohan"
+        }
+      ],
+      "got": [
+        {
+          "kind": "payment",
+          "amount": 100,
+          "customer": null
+        },
+        {
+          "kind": "payment",
+          "amount": 100,
+          "customer": "mohan"
+        }
+      ],
+      "ok": false,
+      "via": "qwen",
+      "parseMs": 3.74,
+      "qwenMs": 662,
+      "sttAfterEndMs": 562
+    },
+    {
+      "mode": "clean",
+      "say": "Geeta ne pachaas rupaye de diye",
+      "heard": "Geeta ने पचास रुपये दे दिए।",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 50,
+          "customer": "geeta"
+        }
+      ],
+      "got": [
+        {
+          "kind": "payment",
+          "amount": 50,
+          "customer": "geeta"
+        }
+      ],
+      "ok": true,
+      "via": "qwen",
+      "parseMs": 0.65,
+      "qwenMs": 237,
+      "sttAfterEndMs": 240
+    },
+    {
+      "mode": "clean",
+      "say": "Nahi, chaar sau tees",
+      "heard": "चार सौ तीस।",
+      "expected": [
+        {
+          "kind": "correction",
+          "amount": 430
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 400,
+          "customer": "चार सौ तीस"
+        }
+      ],
+      "ok": false,
+      "via": "qwen",
+      "parseMs": 0.77,
+      "qwenMs": 290,
+      "sttAfterEndMs": 201
+    },
+    {
+      "mode": "clean",
+      "say": "Nahi, paanch sau",
+      "heard": "नहीं पाँच सौ।",
+      "expected": [
+        {
+          "kind": "correction",
+          "amount": 500
+        }
+      ],
+      "got": [
+        {
+          "kind": "correction",
+          "amount": 500,
+          "customer": null
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 5.42,
+      "qwenMs": 0,
+      "sttAfterEndMs": 300
+    },
+    {
+      "mode": "clean",
+      "say": "Aaj kitna udhaar gaya",
+      "heard": "आज कितना उधार गया?",
+      "expected": [
+        {
+          "kind": "query_today"
+        }
+      ],
+      "got": [
+        {
+          "kind": "query_today"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 5.05,
+      "qwenMs": 0,
+      "sttAfterEndMs": 162
+    },
+    {
+      "mode": "clean",
+      "say": "Ramesh ka total kitna hai",
+      "heard": "Ramesh का total कितना है?",
+      "expected": [
+        {
+          "kind": "query_customer",
+          "customer": "ramesh"
+        }
+      ],
+      "got": [
+        {
+          "kind": "query_customer",
+          "customer": "ramesh"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 1.02,
+      "qwenMs": 0,
+      "sttAfterEndMs": 329
+    },
+    {
+      "mode": "clean",
+      "say": "Sunita ka hisaab batao",
+      "heard": "Sunita का हिसाब बताओ।",
+      "expected": [
+        {
+          "kind": "query_customer",
+          "customer": "sunita"
+        }
+      ],
+      "got": [
+        {
+          "kind": "query_customer",
+          "customer": "sunita"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.96,
+      "qwenMs": 0,
+      "sttAfterEndMs": 3
+    },
+    {
+      "mode": "clean",
+      "say": "Kul kitna baaki hai",
+      "heard": "कुल कितना बाकी है?",
+      "expected": [
+        {
+          "kind": "query_total"
+        }
+      ],
+      "got": [
+        {
+          "kind": "query_total"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.34,
+      "qwenMs": 0,
+      "sttAfterEndMs": 332
+    },
+    {
+      "mode": "clean",
+      "say": "Ramesh ka teen sau udhaar, kal do sau diya tha",
+      "heard": "Ramesh का तीन सौ उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 300,
+          "customer": "ramesh"
+        },
+        {
+          "kind": "payment",
+          "amount": 200,
+          "customer": "ramesh"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 300,
+          "customer": "ramesh"
+        }
+      ],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 3.53,
+      "qwenMs": 0,
+      "sttAfterEndMs": null
+    },
+    {
+      "mode": "clean",
+      "say": "Sunita ka paanch sau udhaar kal sau rupaye diye",
+      "heard": "Sunita का पाँच सौ उधार कल सौ रुपए दिए।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 500,
+          "customer": "sunita"
+        },
+        {
+          "kind": "payment",
+          "amount": 100,
+          "customer": "sunita"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 500,
+          "customer": "sunita"
+        },
+        {
+          "kind": "credit",
+          "amount": 500,
+          "customer": "sunita"
+        }
+      ],
+      "ok": false,
+      "via": "qwen",
+      "parseMs": 3.34,
+      "qwenMs": 242,
+      "sttAfterEndMs": 381
+    },
+    {
+      "mode": "clean",
+      "say": "Mohan ne parso ek sau pachaas diye",
+      "heard": "Mohan ne parson ek sau pachas diye.",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 150,
+          "customer": "mohan"
+        }
+      ],
+      "got": [
+        {
+          "kind": "payment",
+          "amount": 150,
+          "customer": "mohan"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 3.79,
+      "qwenMs": 0,
+      "sttAfterEndMs": 370
+    },
+    {
+      "mode": "clean",
+      "say": "Geeta ke khate me chaar sau ka atta chadha do",
+      "heard": "Geeta के खाते में चार सौ का हत्ता चढ़ा दो।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 400,
+          "customer": "geeta"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 400,
+          "customer": "geeta"
+        }
+      ],
+      "ok": true,
+      "via": "qwen",
+      "parseMs": 2.55,
+      "qwenMs": 235,
+      "sttAfterEndMs": 407
+    },
+    {
+      "mode": "clean",
+      "say": "Imran ko aath sau ka saman diya",
+      "heard": "Imran को आठ सौ का सामान दिया।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 800,
+          "customer": "imran"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 800,
+          "customer": "imran"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 1.17,
+      "qwenMs": 0,
+      "sttAfterEndMs": 325
+    },
+    {
+      "mode": "clean",
+      "say": "Anil ne dedh hazaar ka maal liya",
+      "heard": "अनिल ने डेढ़ हज़ार का माल लिया।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 1500,
+          "customer": "anil"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 150000,
+          "customer": "अनिल"
+        }
+      ],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.4,
+      "qwenMs": 0,
+      "sttAfterEndMs": 33
+    },
+    {
+      "mode": "noisy",
+      "say": "Ramesh ka teen sau chaalis rupaye udhaar",
+      "heard": "Ramesh का तीन सौ चालीस रुपए उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "ramesh"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "ramesh"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.54,
+      "qwenMs": 0,
+      "sttAfterEndMs": 530
+    },
+    {
+      "mode": "noisy",
+      "say": "Sunita ka paanch sau udhaar",
+      "heard": "Pooja Sunita का पाँच सौ।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 500,
+          "customer": "sunita"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 5,
+          "customer": "pooja"
+        }
+      ],
+      "ok": false,
+      "via": "qwen",
+      "parseMs": 0.68,
+      "qwenMs": 247,
+      "sttAfterEndMs": 310
+    },
+    {
+      "mode": "noisy",
+      "say": "Mohan ka ek hazaar do sau udhaar",
+      "heard": "मोहन का एक हजार दो सौ उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 1200,
+          "customer": "mohan"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 1200,
+          "customer": "मोहन"
+        }
+      ],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.53,
+      "qwenMs": 0,
+      "sttAfterEndMs": 372
+    },
+    {
+      "mode": "noisy",
+      "say": "Geeta ka dedh sau udhaar",
+      "heard": "Geeta का डेढ़ सौ उधार है।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 150,
+          "customer": "geeta"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 150,
+          "customer": "geeta"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.53,
+      "qwenMs": 0,
+      "sttAfterEndMs": null
+    },
+    {
+      "mode": "noisy",
+      "say": "Imran ka dhai sau udhaar",
+      "heard": "Imran Khan, ढाई सौ उधार चढ़ा दो।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 250,
+          "customer": "imran"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 250,
+          "customer": "imran"
+        },
+        {
+          "kind": "credit",
+          "amount": 250,
+          "customer": "imran khan"
+        }
+      ],
+      "ok": false,
+      "via": "qwen",
+      "parseMs": 0.71,
+      "qwenMs": 244,
+      "sttAfterEndMs": 503
+    },
+    {
+      "mode": "noisy",
+      "say": "Anil ka saade teen sau udhaar",
+      "heard": "Anil का salary का तीन सौ उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 350,
+          "customer": "anil"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 300,
+          "customer": "का salary"
+        }
+      ],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.54,
+      "qwenMs": 0,
+      "sttAfterEndMs": 276
+    },
+    {
+      "mode": "noisy",
+      "say": "Pooja ka 340 rupaye udhaar",
+      "heard": "Pooja का three hundred forty रुपये उधार।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "pooja"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "pooja"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.62,
+      "qwenMs": 0,
+      "sttAfterEndMs": 236
+    },
+    {
+      "mode": "noisy",
+      "say": "Kavita ka three hundred forty rupees udhaar",
+      "heard": "Kavita का three hundred forty rupees उधार हो गया था।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "kavita"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 340,
+          "customer": "kavita"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.24,
+      "qwenMs": 0,
+      "sttAfterEndMs": 248
+    },
+    {
+      "mode": "noisy",
+      "say": "Ramesh ne do sau rupaye diye",
+      "heard": "नहीं, Ramesh ने दो सौ रुपए दिए।",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 200,
+          "customer": "ramesh"
+        }
+      ],
+      "got": [
+        {
+          "kind": "correction",
+          "amount": 200,
+          "customer": "ramesh"
+        }
+      ],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.44,
+      "qwenMs": 0,
+      "sttAfterEndMs": 286
+    },
+    {
+      "mode": "noisy",
+      "say": "Sunita ne paanch sau wapas kiye",
+      "heard": "Mohan Sunita ने पाँच सौ बार बात की।",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 500,
+          "customer": "sunita"
+        }
+      ],
+      "got": [],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.57,
+      "qwenMs": 396,
+      "sttAfterEndMs": 285
+    },
+    {
+      "mode": "noisy",
+      "say": "Mohan ka sau rupaye jama kar do",
+      "heard": "मोहन, का सौ रुपए जमा कर दो।",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 100,
+          "customer": "mohan"
+        }
+      ],
+      "got": [
+        {
+          "kind": "payment",
+          "amount": 100,
+          "customer": null
+        },
+        {
+          "kind": "payment",
+          "amount": 100,
+          "customer": "mohan"
+        }
+      ],
+      "ok": false,
+      "via": "qwen",
+      "parseMs": 1,
+      "qwenMs": 233,
+      "sttAfterEndMs": 287
+    },
+    {
+      "mode": "noisy",
+      "say": "Geeta ne pachaas rupaye de diye",
+      "heard": "Imran Geeta ने पचास रुपए दे दिए उधार।",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 50,
+          "customer": "geeta"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 50,
+          "customer": "imran geeta"
+        }
+      ],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.57,
+      "qwenMs": 0,
+      "sttAfterEndMs": 203
+    },
+    {
+      "mode": "noisy",
+      "say": "Nahi, chaar sau tees",
+      "heard": "तीन।",
+      "expected": [
+        {
+          "kind": "correction",
+          "amount": 430
+        }
+      ],
+      "got": [],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.46,
+      "qwenMs": 224,
+      "sttAfterEndMs": 210
+    },
+    {
+      "mode": "noisy",
+      "say": "Nahi, paanch sau",
+      "heard": "Ramesh का तीन लाख साठ हज़ार।",
+      "expected": [
+        {
+          "kind": "correction",
+          "amount": 500
+        }
+      ],
+      "got": [],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.56,
+      "qwenMs": 250,
+      "sttAfterEndMs": 273
+    },
+    {
+      "mode": "noisy",
+      "say": "Aaj kitna udhaar gaya",
+      "heard": "आज कितना उधार गया?",
+      "expected": [
+        {
+          "kind": "query_today"
+        }
+      ],
+      "got": [
+        {
+          "kind": "query_today"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.68,
+      "qwenMs": 0,
+      "sttAfterEndMs": 360
+    },
+    {
+      "mode": "noisy",
+      "say": "Ramesh ka total kitna hai",
+      "heard": "Ramesh का total कितना है?",
+      "expected": [
+        {
+          "kind": "query_customer",
+          "customer": "ramesh"
+        }
+      ],
+      "got": [
+        {
+          "kind": "query_customer",
+          "customer": "ramesh"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.3,
+      "qwenMs": 0,
+      "sttAfterEndMs": 368
+    },
+    {
+      "mode": "noisy",
+      "say": "Sunita ka hisaab batao",
+      "heard": "Sunita का हिसाब बताओ।",
+      "expected": [
+        {
+          "kind": "query_customer",
+          "customer": "sunita"
+        }
+      ],
+      "got": [
+        {
+          "kind": "query_customer",
+          "customer": "sunita"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.36,
+      "qwenMs": 0,
+      "sttAfterEndMs": 323
+    },
+    {
+      "mode": "noisy",
+      "say": "Kul kitna baaki hai",
+      "heard": "कुल कितना marks हो सकता है?",
+      "expected": [
+        {
+          "kind": "query_total"
+        }
+      ],
+      "got": [
+        {
+          "kind": "query_total"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.34,
+      "qwenMs": 0,
+      "sttAfterEndMs": 202
+    },
+    {
+      "mode": "noisy",
+      "say": "Ramesh ka teen sau udhaar, kal do sau diya tha",
+      "heard": "Ramesh का तीन सौ उधार, तीन सौ कल दो सौ दिया था।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 300,
+          "customer": "ramesh"
+        },
+        {
+          "kind": "payment",
+          "amount": 200,
+          "customer": "ramesh"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 300,
+          "customer": "ramesh"
+        },
+        {
+          "kind": "payment",
+          "amount": 200,
+          "customer": "ramesh"
+        },
+        {
+          "kind": "credit",
+          "amount": 300,
+          "customer": "ramesh"
+        }
+      ],
+      "ok": false,
+      "via": "qwen",
+      "parseMs": 1.15,
+      "qwenMs": 247,
+      "sttAfterEndMs": 399
+    },
+    {
+      "mode": "noisy",
+      "say": "Sunita ka paanch sau udhaar kal sau rupaye diye",
+      "heard": "Pooja, Sunita का पांच सौ उधार कल सौ रुपए दिए।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 500,
+          "customer": "sunita"
+        },
+        {
+          "kind": "payment",
+          "amount": 100,
+          "customer": "sunita"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 500,
+          "customer": "sunita"
+        },
+        {
+          "kind": "credit",
+          "amount": 500,
+          "customer": "sunita"
+        }
+      ],
+      "ok": false,
+      "via": "qwen",
+      "parseMs": 1.11,
+      "qwenMs": 245,
+      "sttAfterEndMs": 416
+    },
+    {
+      "mode": "noisy",
+      "say": "Mohan ne parso ek sau pachaas diye",
+      "heard": "Mohan ने परसों एक सौ पचास rupees उधार।",
+      "expected": [
+        {
+          "kind": "payment",
+          "amount": 150,
+          "customer": "mohan"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 150,
+          "customer": "mohan"
+        }
+      ],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.53,
+      "qwenMs": 0,
+      "sttAfterEndMs": 237
+    },
+    {
+      "mode": "noisy",
+      "say": "Geeta ke khate me chaar sau ka atta chadha do",
+      "heard": "Amita के खाते में चार सौ का हत्ता चढ़ा दो।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 400,
+          "customer": "geeta"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 400,
+          "customer": "amita"
+        }
+      ],
+      "ok": false,
+      "via": "qwen",
+      "parseMs": 0.41,
+      "qwenMs": 246,
+      "sttAfterEndMs": 432
+    },
+    {
+      "mode": "noisy",
+      "say": "Imran ko aath sau ka saman diya",
+      "heard": "Imran को आठ सौ का सामान दिया।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 800,
+          "customer": "imran"
+        }
+      ],
+      "got": [
+        {
+          "kind": "credit",
+          "amount": 800,
+          "customer": "imran"
+        }
+      ],
+      "ok": true,
+      "via": "parser",
+      "parseMs": 0.51,
+      "qwenMs": 0,
+      "sttAfterEndMs": 290
+    },
+    {
+      "mode": "noisy",
+      "say": "Anil ne dedh hazaar ka maal liya",
+      "heard": "Imran ने Kavita के साथ झगड़ा मार दिया।",
+      "expected": [
+        {
+          "kind": "credit",
+          "amount": 1500,
+          "customer": "anil"
+        }
+      ],
+      "got": [],
+      "ok": false,
+      "via": "parser",
+      "parseMs": 0.48,
+      "qwenMs": 252,
+      "sttAfterEndMs": null
+    }
+  ]
+}

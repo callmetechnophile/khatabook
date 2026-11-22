@@ -1,0 +1,15 @@
+{
+  "name": "khatawas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "live-test": "node scripts/live-test.js",
+    "rescore": "node scripts/rescore.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.23.0"
+  }
+}

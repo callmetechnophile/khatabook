@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0b0a" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<title>KHATAWAS</title>
+<style>
+/* Layout: one calm column. Translucent header over scrolling content, one big control, grouped lists. Tokens first. */
+:root {
+  --bg: #f2f2f7; --surface: #ffffff; --surface-2: #f7f7fa; --fg: #1b1612; --mute: #6e6a64; --line: #e3e0da;
+  --accent: #e8890c; --accent-ink: #1b1612; --accent-soft: #fdeed6; --bad: #b3261e; --good: #1f7a3d;
+  --glass: rgba(242,242,247,.72); --scrim: rgba(20,16,12,.36); --shadow: 0 10px 30px rgba(40,28,10,.12);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Kannada", "Noto Sans Tamil", "Noto Sans Telugu", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0c0b0a; --surface: #1c1a18; --surface-2: #232120; --fg: #f4efe8; --mute: #a39c92; --line: #2e2b28;
+  --accent: #f5a524; --accent-soft: #3a2a10; --bad: #ff8a80; --good: #6fd08c; --glass: rgba(12,11,10,.72); --scrim: rgba(0,0,0,.55); --shadow: 0 10px 30px rgba(0,0,0,.5); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0c0b0a; --surface: #1c1a18; --surface-2: #232120; --fg: #f4efe8; --mute: #a39c92; --line: #2e2b28;
+  --accent: #f5a524; --accent-soft: #3a2a10; --bad: #ff8a80; --good: #6fd08c; --glass: rgba(12,11,10,.72); --scrim: rgba(0,0,0,.55); --shadow: 0 10px 30px rgba(0,0,0,.5); color-scheme: dark; }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { background: var(--bg); color: var(--fg); font: 400 1rem/1.45 var(--font); padding-block: 0 6rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.col { max-width: 30rem; margin: 0 auto; display: flex; flex-direction: column; gap: 1.25rem; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+
+/* header: a translucent layer; content scrolls under it */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 20; background: var(--glass); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding: .75rem max(16px, env(safe-area-inset-left, 0px)); background: var(--glass); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+header .in { max-width: 30rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.brand { font-size: 1.375rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.brand small { display: block; font-size: .75rem; font-weight: 500; letter-spacing: .01em; color: var(--mute); margin-top: .15rem; }
+.lang { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .8rem; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: .9375rem; cursor: pointer; transition: transform 100ms ease-out; }
+.lang:active, .chip:active, .opt:active, .row-btn:active { transform: scale(.97); }
+.lang svg { width: 14px; height: 14px; opacity: .6; }
+
+.banner { font-size: .8125rem; color: var(--mute); text-align: center; padding-top: .25rem; }
+
+/* conversation */
+.thread { display: flex; flex-direction: column; gap: .5rem; min-height: 9.5rem; }
+.bubble { max-width: 88%; padding: .7rem .95rem; border-radius: 1.25rem; font-size: 1.0625rem; line-height: 1.4; animation: rise 320ms cubic-bezier(.2,.9,.25,1) both; overflow-wrap: anywhere; }
+.bubble.me { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: .4rem; font-weight: 500; }
+.bubble.bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: .4rem; }
+.meta { font-size: .75rem; color: var(--mute); margin: 0 .35rem; display: flex; gap: .5rem; flex-wrap: wrap; }
+.meta.r { align-self: flex-end; }
+.note { align-self: flex-start; font-size: .8125rem; color: var(--mute); margin: -.1rem .35rem 0; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.undo { border: 0; background: var(--accent-soft); color: var(--fg); font-weight: 600; border-radius: 99px; padding: .3rem .7rem; cursor: pointer; font-size: .8125rem; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+.opts { display: flex; gap: .5rem; flex-wrap: wrap; align-self: flex-start; }
+.opt { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: .55rem .95rem; font-weight: 600; cursor: pointer; transition: transform 100ms ease-out; }
+
+/* the one big control */
+.mic-wrap { display: grid; place-items: center; gap: .65rem; padding: .5rem 0 0; }
+.mic { position: relative; width: 7.75rem; height: 7.75rem; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 45%, transparent); transition: transform 120ms ease-out, box-shadow 120ms ease-out; }
+.mic svg { width: 2.4rem; height: 2.4rem; }
+.mic.on { transform: scale(.95); box-shadow: 0 0 0 .8rem color-mix(in srgb, var(--accent) 22%, transparent), 0 0 0 1.7rem color-mix(in srgb, var(--accent) 10%, transparent); }
+.bars { display: none; gap: 4px; align-items: center; height: 2.4rem; }
+.mic.on svg { display: none; } .mic.on .bars { display: flex; }
+.bars i { width: 5px; border-radius: 3px; background: var(--accent-ink); height: 30%; animation: bar 900ms ease-in-out infinite; }
+.bars i:nth-child(2) { animation-delay: -.2s; } .bars i:nth-child(3) { animation-delay: -.45s; } .bars i:nth-child(4) { animation-delay: -.1s; } .bars i:nth-child(5) { animation-delay: -.6s; }
+@keyframes bar { 50% { height: 100%; } }
+.hint { font-size: .9375rem; color: var(--mute); font-weight: 500; min-height: 1.4em; text-align: center; }
+
+.chips { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: none; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding-inline: max(16px, env(safe-area-inset-left, 0px)); }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: .5rem .85rem; font-size: .875rem; cursor: pointer; transition: transform 100ms ease-out; text-align: left; }
+.chip b { display: block; font-size: .6875rem; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); font-weight: 600; }
+
+/* grouped list */
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; margin: 0 .25rem .5rem; }
+.sec-h h2 { margin: 0; font-size: .8125rem; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); font-weight: 600; }
+.sec-h span { font-variant-numeric: tabular-nums; font-weight: 600; font-size: .9375rem; }
+.list { background: var(--surface); border-radius: 1.1rem; overflow: hidden; border: 1px solid var(--line); }
+.row { display: flex; align-items: center; gap: .8rem; padding: .75rem .9rem; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.av { flex: none; width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .95rem; color: #fff; }
+.who { flex: 1; min-width: 0; }
+.who b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who small { color: var(--mute); font-size: .8125rem; }
+.amt { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.0625rem; }
+.amt.owes { color: var(--bad); } .amt.zero { color: var(--mute); font-weight: 500; }
+.row.flash { animation: flash 1.1s ease-out; }
+@keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+.add { display: flex; gap: .5rem; margin-top: .6rem; }
+.add input { flex: 1; min-width: 0; padding: .7rem .9rem; border-radius: .9rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; }
+.add button, .primary { padding: .7rem 1.1rem; border-radius: .9rem; border: 0; background: var(--fg); color: var(--bg); font-weight: 600; cursor: pointer; }
+.dup { font-size: .8125rem; color: var(--mute); margin: .5rem .25rem 0; }
+
+footer { margin-top: .5rem; font-size: .8125rem; color: var(--mute); display: flex; flex-direction: column; gap: .35rem; align-items: center; text-align: center; }
+.row-btn { background: none; border: 0; color: var(--bad); font-weight: 600; cursor: pointer; padding: .4rem .6rem; }
+
+/* language sheet: follows the finger 1:1, then flies on with the release velocity */
+.scrim { position: fixed; inset: 0; background: var(--scrim); opacity: 0; pointer-events: none; z-index: 30; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-width: 32rem; margin: 0 auto; background: var(--surface); border-radius: 1.5rem 1.5rem 0 0; box-shadow: var(--shadow);
+  padding: .5rem max(16px, env(safe-area-inset-left, 0px)) calc(1rem + env(safe-area-inset-bottom, 0px)); transform: translateY(105%); will-change: transform; touch-action: none; visibility: hidden; }
+.grab { width: 2.5rem; height: .3rem; border-radius: 3px; background: var(--line); margin: .25rem auto .75rem; }
+.sheet h3 { margin: 0 .25rem .25rem; font-size: 1.125rem; letter-spacing: -.01em; }
+.sheet p { margin: 0 .25rem .85rem; color: var(--mute); font-size: .875rem; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; max-height: 52vh; overflow-y: auto; touch-action: pan-y; }
+.l { border: 1px solid var(--line); background: var(--surface-2); border-radius: .95rem; padding: .7rem .85rem; text-align: left; cursor: pointer; min-width: 0; transition: transform 100ms ease-out; }
+.l:active { transform: scale(.97); }
+.l b { display: block; font-size: 1.0625rem; font-weight: 600; }
+.l small { color: var(--mute); font-size: .75rem; }
+.l[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.l.auto { grid-column: 1 / -1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble { animation: none; } .bars i { animation: none; height: 60%; } .row.flash { animation: none; }
+  .mic, .lang, .chip, .opt, .l { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) { header, body::before { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+
+.mode { font-size: .75rem; }
+.empty { color: var(--mute); font-size: 1rem; padding: 1.25rem .5rem; text-align: center; }
+.try-row { display:flex; gap:.5rem; margin-top:.6rem; }
+.try-row input { flex:1; min-width:0; padding:.7rem .9rem; border-radius:.9rem; border:1px solid var(--line); background:var(--surface); color:var(--fg); font:inherit; }
+.try-row button { padding:.7rem 1.1rem; border-radius:.9rem; border:0; background:var(--fg); color:var(--bg); font-weight:600; cursor:pointer; }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+</style>
+</head>
+<body>
+<header><div class="in">
+  <div class="brand" style="display: flex; align-items: center; gap: 0.75rem;">
+    <a href="/" style="display: flex; align-items: center; text-decoration: none;">
+      <img src="/assets/khatawas-icon.png" alt="KHATAWAS Brand" width="36" height="36" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
+    </a>
+    <div>
+      <a href="/" style="color: inherit; text-decoration: none;">Khatawas</a>
+      <small id="sub" style="display: block;">Voice ledger for your kirana store</small>
+    </div>
+  </div>
+  <a href="/" style="font-size: 0.8125rem; font-weight: 600; color: var(--mute); text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 99px; border: 1px solid var(--line); margin-left: auto;">← Story</a>
+  <button class="lang" id="langBtn" aria-haspopup="dialog" aria-label="Change language"><span id="langName">हिन्दी</span>
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
+</div></header>
+
+<main class="col">
+  <section class="thread" id="thread" aria-live="polite"></section>
+
+  <section class="mic-wrap">
+    <button class="mic" id="ptt" aria-label="Hold to talk">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm6-4a1 1 0 1 1 2 0 8 8 0 0 1-7 7.94V21h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2.06A8 8 0 0 1 4 11a1 1 0 1 1 2 0 6 6 0 0 0 12 0z"/></svg>
+      <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+    </button>
+    <div class="hint" id="hint">Hold to talk</div>
+  </section>
+
+  <section>
+    <div class="sec-h"><h2>Try saying</h2></div>
+    <div class="chips" id="chips"></div>
+    <form class="try-row" id="typed"><label class="sr" for="txt">Type instead</label><input id="txt" placeholder="or type: Ramesh ka 340 udhaar" autocomplete="off"><button>Send</button></form>
+  </section>
+
+  <section>
+    <div class="sec-h"><h2>Customers</h2><span id="total"></span></div>
+    <div class="list" id="list"></div>
+    <form class="add" id="addcust"><label class="sr" for="newcust">Customer name</label><input id="newcust" placeholder="Add a customer" autocomplete="off"><button>Add</button></form>
+    <div class="dup" id="dup" hidden></div>
+  </section>
+
+  <footer>
+    <div>I am an AI assistant. Your ledger is encrypted on this device (AES-256-GCM).</div>
+    <div class="mode" id="mode"></div>
+    <button class="row-btn" id="wipe">Delete all data</button>
+  </footer>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetT">
+  <div class="grab" id="grab"></div>
+  <h3 id="sheetT">Language</h3>
+  <p>Speak and hear replies in your own language. Auto-detect works out the language from your voice.</p>
+  <div class="grid" id="grid"></div>
+</div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

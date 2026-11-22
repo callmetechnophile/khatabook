@@ -1,0 +1,18 @@
+# Render Blueprint: one web service running the Node server (serves the app + the /stt and /tts WebSockets).
+services:
+  - type: web
+    name: khatawas
+    runtime: docker
+    plan: free            # free sleeps after ~15 min idle (first visit then takes ~1 min); "starter" is always-on
+    healthCheckPath: /healthz
+    envVars:
+      - key: GNANI_API_KEY
+        sync: false       # you paste this in the Render dashboard, never in git
+      - key: ACCESS_CODE
+        sync: false       # you choose a code; judges' link ends in ?code=<this>
+      - key: PUBLIC_DEMO
+        value: "1"        # open to everyone; usage is capped per visitor and per day (see server/index.js)
+      - key: GNANI_STT_WS_URL
+        value: wss://api.vachana.ai/stt/v3/stream
+      - key: GNANI_TTS_WS_URL
+        value: wss://api.vachana.ai/api/v1/tts
