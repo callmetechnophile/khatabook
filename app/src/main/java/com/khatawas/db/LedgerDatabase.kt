@@ -547,7 +547,7 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
             SELECT 
                 SUM(CASE 
                     WHEN t.$COLUMN_TYPE = 'CREDIT' THEN t.$COLUMN_AMOUNT_PAISE 
-                    WHEN t.$COLUMN_TYPE = 'PAYMENT' THEN -t.$COLUMN_AMOUNT_PAISE 
+                    WHEN t.$COLUMN_TYPE IN ('PAYMENT', 'DEBIT') THEN -t.$COLUMN_AMOUNT_PAISE 
                     WHEN t.$COLUMN_TYPE = 'REVERSAL' THEN -t.$COLUMN_AMOUNT_PAISE
                     ELSE 0 
                 END)
@@ -708,7 +708,7 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
                 c.$COLUMN_NAME,
                 SUM(CASE 
                     WHEN t.$COLUMN_TYPE = 'CREDIT' THEN t.$COLUMN_AMOUNT_PAISE 
-                    WHEN t.$COLUMN_TYPE = 'PAYMENT' THEN -t.$COLUMN_AMOUNT_PAISE 
+                    WHEN t.$COLUMN_TYPE IN ('PAYMENT', 'DEBIT') THEN -t.$COLUMN_AMOUNT_PAISE 
                     WHEN t.$COLUMN_TYPE = 'REVERSAL' THEN -t.$COLUMN_AMOUNT_PAISE
                     ELSE 0 
                 END) as balance
@@ -1189,7 +1189,7 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
             SELECT 
                 SUM(CASE 
                     WHEN $COLUMN_TYPE = 'CREDIT' THEN $COLUMN_AMOUNT_PAISE 
-                    WHEN $COLUMN_TYPE = 'PAYMENT' THEN -$COLUMN_AMOUNT_PAISE 
+                    WHEN $COLUMN_TYPE IN ('PAYMENT', 'DEBIT') THEN -$COLUMN_AMOUNT_PAISE 
                     WHEN $COLUMN_TYPE = 'REVERSAL' THEN -$COLUMN_AMOUNT_PAISE 
                     ELSE 0 
                 END)

@@ -195,7 +195,9 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        if (!BuildConfig.DEBUG) {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        }
 
         // Mandatory locked state on application startup
         PrivacyManager.lockSession()
@@ -237,9 +239,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         appOrchestrator.onTransactionSaved = { transaction ->
-            val direction = if (transaction.type == "CREDIT") "Credit added (+)" else if (transaction.type == "PAYMENT") "Payment received (-)" else "Reversal processed"
+            val isCredit = transaction.type == "CREDIT"
+            val direction = if (isCredit) "Give Udhaar (+)" else if (transaction.type == "PAYMENT") "Got Payment (-)" else "Reversal processed"
             cachedLatestAmountString = "${transaction.name}  ·  ${IndianCurrencyFormatter.formatPaise(transaction.amountPaise)}"
             cachedLatestDetailString = "$direction  •  Offset: ${transaction.dateOffset} day(s)"
+            tvResult.setTextColor(ContextCompat.getColor(this, if (isCredit) R.color.btn_credit_bg else R.color.btn_debit_bg))
             tvStatus.text = "Saved to your local encrypted ledger."
             updateSyncUi(syncManager.getCurrentSyncState())
             refreshLedgerAndTransactions(null)
@@ -1138,6 +1142,13 @@ class MainActivity : AppCompatActivity() {
 
             tvLedgerBalance.text = IndianCurrencyFormatter.formatPaise(cachedBalancePaise)
             tvLedgerBalance.contentDescription = IndianCurrencyFormatter.formatPaise(cachedBalancePaise)
+            if (cachedBalancePaise > 0L) {
+                tvLedgerBalance.setTextColor(ContextCompat.getColor(this, R.color.btn_credit_bg))
+            } else if (cachedBalancePaise < 0L) {
+                tvLedgerBalance.setTextColor(ContextCompat.getColor(this, R.color.btn_debit_bg))
+            } else {
+                tvLedgerBalance.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+            }
 
             val customerLabel = currentFilteredCustomer ?: "All Customers"
             tvLedgerCustomerName.text = customerLabel

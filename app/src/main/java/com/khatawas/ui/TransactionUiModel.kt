@@ -12,9 +12,9 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Exactly four presentation categories:
- * - CREDIT: Money added to the customer's outstanding balance (Green)
- * - DEBIT: Money deducted from the customer's outstanding balance (Red)
+ * Exactly four presentation categories (Shopkeeper cash-flow perspective):
+ * - CREDIT: Money added to customer's outstanding balance / Give Udhar (RED)
+ * - DEBIT: Money deducted from customer's outstanding balance / Got Payment (GREEN)
  * - STUCK: Transaction explicitly classified as stuck (Yellow)
  * - ILLEGAL: Transaction explicitly classified as an illegal bank payment (Grey)
  */
@@ -28,19 +28,19 @@ enum class TransactionCategory(
 ) {
     CREDIT(
         label = "CREDIT",
-        meaning = "Money added to customer's outstanding balance",
+        meaning = "Money added to customer's outstanding balance (Give Udhar)",
         bgDrawableRes = R.drawable.bg_badge_credit,
         textColorRes = R.color.badge_credit_text,
-        lightHexColor = "#1B5E20",
-        darkHexColor = "#81C784"
+        lightHexColor = "#C62828",
+        darkHexColor = "#EF5350"
     ),
     DEBIT(
         label = "DEBIT",
-        meaning = "Money deducted from customer's outstanding balance",
+        meaning = "Money deducted from customer's outstanding balance (Got Payment)",
         bgDrawableRes = R.drawable.bg_badge_debit,
         textColorRes = R.color.badge_debit_text,
-        lightHexColor = "#B71C1C",
-        darkHexColor = "#EF9A9A"
+        lightHexColor = "#1B5E20",
+        darkHexColor = "#81C784"
     ),
     STUCK(
         label = "STUCK",
