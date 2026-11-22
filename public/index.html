@@ -353,37 +353,73 @@
           </a>
 
           <!-- OPTION 2 — ANDROID APP -->
-          <a href="https://github.com/callmetechnophile/khatabook" class="destination-card reveal" target="_blank" rel="noopener noreferrer" aria-label="Get the Android App on GitHub">
+          <div class="destination-card reveal" id="android-download-card">
             <div>
               <div class="dest-top-row">
-                <div class="dest-icon-container" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="5" y="2" width="14" height="20" rx="3"></rect>
-                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
-                  </svg>
+                <div class="dest-icon-container" aria-hidden="true" style="padding: 6px;">
+                  <img src="/assets/khatawas-icon.png" alt="KHATAWAS App Icon" style="width: 100%; height: 100%; border-radius: var(--radius-md); object-fit: contain;">
                 </div>
-                <span class="dest-badge">Native Android App</span>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                  <span class="dest-badge">Android APK v1.0.0</span>
+                  <span class="dest-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border-color: rgba(16, 185, 129, 0.25);">Official Release</span>
+                </div>
               </div>
 
               <div class="dest-content">
-                <h3 class="dest-title">Get the Android App</h3>
+                <h3 class="dest-title">Download Android App</h3>
                 <p class="dest-description">
-                  Explore the Android application and download its available release. Built with offline-first SQLCipher AES-256 encryption, local INT8 models, and high-contrast rural UI.
+                  Install the official native Android release directly on your phone. Built with offline-first SQLCipher AES-256 encryption, local INT8 models, physical voice processing, and high-contrast rural shopkeeper UI.
                 </p>
+
+                <!-- APK Metadata Chips -->
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.25rem; font-size: 0.8125rem; font-family: var(--font-mono);">
+                  <span style="background: var(--bg-surface-alt, rgba(255,255,255,0.04)); padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); border: 1px solid var(--border-hairline); color: var(--text-secondary);">Size: 60.0 MB</span>
+                  <span style="background: var(--bg-surface-alt, rgba(255,255,255,0.04)); padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); border: 1px solid var(--border-hairline); color: var(--text-secondary);">Android 7.0+ (API 24-34)</span>
+                  <span style="background: var(--bg-surface-alt, rgba(255,255,255,0.04)); padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); border: 1px solid var(--border-hairline); color: var(--text-secondary);">v2/v3 Signed</span>
+                </div>
               </div>
             </div>
 
-            <div class="dest-footer">
-              <span class="dest-action-btn">
-                View on GitHub
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                  <polyline points="12 5 19 12 12 19"></polyline>
-                </svg>
-              </span>
-              <span class="dest-meta">GitHub Releases & APK Guide</span>
+            <!-- Actions & Installation Guidance -->
+            <div style="display: flex; flex-direction: column; gap: 1rem; border-top: 1px solid var(--border-hairline); padding-top: 1.5rem; margin-top: 1.5rem;">
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                <a href="https://github.com/callmetechnophile/khatabook/releases/download/v1.0.0/KHATAWAS-v1.0.0-release.apk" class="dest-action-btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; padding: 0.75rem 1.25rem; border-radius: var(--radius-md); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  Download Release APK (v1.0.0)
+                </a>
+                <a href="https://github.com/callmetechnophile/khatabook" target="_blank" rel="noopener noreferrer" style="color: var(--text-secondary); padding: 0.75rem 1rem; font-size: 0.9rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; border: 1px solid var(--border-hairline); border-radius: var(--radius-md); background: var(--bg-surface);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                  </svg>
+                  GitHub Repository
+                </a>
+              </div>
+
+              <!-- Collapsible Installation & Verification Guide -->
+              <details style="background: var(--bg-surface-alt, rgba(255,255,255,0.03)); border: 1px solid var(--border-hairline); border-radius: var(--radius-md); padding: 0.75rem 1rem; font-size: 0.875rem;">
+                <summary style="cursor: pointer; font-weight: 600; color: var(--accent-saffron); display: flex; align-items: center; justify-content: space-between;">
+                  <span>How to install on Android &amp; Verify Checksum</span>
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">&#9662;</span>
+                </summary>
+                <div style="margin-top: 0.75rem; line-height: 1.6; color: var(--text-secondary);">
+                  <ol style="margin-left: 1.25rem; padding-left: 0;">
+                    <li>Download <strong>KHATAWAS-v1.0.0-release.apk</strong> directly onto your device.</li>
+                    <li>If Chrome warns <em>"File might be harmful"</em>, tap <strong>Download anyway</strong>.</li>
+                    <li>Open the APK file. If prompted for permission, tap <strong>Settings</strong> and switch on <strong>Allow from this source</strong>.</li>
+                    <li>Tap <strong>Install</strong>, then launch KHATAWAS.</li>
+                  </ol>
+                  <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-hairline);">
+                    <div style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted); margin-bottom: 0.25rem;">SHA-256 Checksum:</div>
+                    <code style="display: block; font-size: 0.72rem; font-family: var(--font-mono); word-break: break-all; background: var(--bg-surface); padding: 0.35rem 0.5rem; border-radius: var(--radius-sm); color: var(--accent-amber); border: 1px solid var(--border-hairline);">4208b42520398f3b67decf9814888325e159c918b236c4b5db51ec22664185dc</code>
+                  </div>
+                </div>
+              </details>
             </div>
-          </a>
+          </div>
 
         </div>
       </div>
@@ -409,6 +445,7 @@
             <h5>Product</h5>
             <ul>
               <li><a href="https://khatawas.onrender.com/" target="_blank" rel="noopener noreferrer">Explore Web App</a></li>
+              <li><a href="https://github.com/callmetechnophile/khatabook/releases/download/v1.0.0/KHATAWAS-v1.0.0-release.apk">Download Android APK (v1.0.0)</a></li>
               <li><a href="https://github.com/callmetechnophile/khatabook" target="_blank" rel="noopener noreferrer">Android Repository</a></li>
               <li><a href="/app">Launch Local Web Demo</a></li>
             </ul>
