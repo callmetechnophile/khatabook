@@ -28,6 +28,9 @@ import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import com.khatawas.util.LanguageManager
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -166,7 +169,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var historyTransactionAdapter: TransactionAdapter
     private var currentCategoryFilter: String? = null
 
+    private var currentTab: Int = 0
+
     // Tab 5: Settings Views
+    private var rgLanguageSelector: RadioGroup? = null
+    private var rbLangEn: RadioButton? = null
+    private var rbLangHi: RadioButton? = null
+    private var rbLangKn: RadioButton? = null
     private lateinit var btnLangEn: Button
     private lateinit var btnLangHi: Button
     private lateinit var btnLangKn: Button
@@ -192,6 +201,10 @@ class MainActivity : AppCompatActivity() {
     private val bgExecutor = Executors.newSingleThreadExecutor()
     private var currentFilteredCustomer: String? = null
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LanguageManager.wrapContext(newBase))
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -202,6 +215,7 @@ class MainActivity : AppCompatActivity() {
         // Mandatory locked state on application startup
         PrivacyManager.lockSession()
 
+        LanguageManager.applyToResources(resources, this)
         setContentView(R.layout.activity_main)
 
         // Initialize UI Components
@@ -211,6 +225,9 @@ class MainActivity : AppCompatActivity() {
         setupCustomerDirectory()
         setupHistoryFilters()
         setupSettingsTab()
+
+        val initialTab = savedInstanceState?.getInt("KEY_ACTIVE_TAB", 0) ?: 0
+        switchToTab(initialTab)
 
         // Phase 5 Runtime JNI Verification for Milestones 2-5
         runMilestone2Verification()
@@ -420,6 +437,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun switchToTab(tabIndex: Int) {
+        currentTab = tabIndex
         val activeColor = ContextCompat.getColor(this, R.color.primary_brand)
         val inactiveColor = ContextCompat.getColor(this, R.color.nav_inactive_item)
 
@@ -530,24 +548,86 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupSettingsTab() {
+        rgLanguageSelector = findViewById(R.id.rg_language_selector)
+        rbLangEn = findViewById(R.id.rb_lang_en)
+        rbLangHi = findViewById(R.id.rb_lang_hi)
+        rbLangKn = findViewById(R.id.rb_lang_kn)
         btnLangEn = findViewById(R.id.btn_lang_en)
         btnLangHi = findViewById(R.id.btn_lang_hi)
         btnLangKn = findViewById(R.id.btn_lang_kn)
 
-        btnLangEn.setOnClickListener { changeLanguage("en") }
-        btnLangHi.setOnClickListener { changeLanguage("hi") }
-        btnLangKn.setOnClickListener { changeLanguage("kn") }
+        val currentLang = LanguageManager.getLanguage(this)
+        updateLanguageSelectionUi(currentLang)
+
+        rgLanguageSelector?.setOnCheckedChangeListener { _, checkedId ->
+            val targetLang = when (checkedId) {
+                R.id.rb_lang_hi -> LanguageManager.LANG_HI
+                R.id.rb_lang_kn -> LanguageManager.LANG_KN
+                else -> LanguageManager.LANG_EN
+            }
+            if (targetLang != LanguageManager.getLanguage(this)) {
+                changeLanguage(targetLang)
+            }
+        }
+
+        btnLangEn.setOnClickListener { changeLanguage(LanguageManager.LANG_EN) }
+        btnLangHi.setOnClickListener { changeLanguage(LanguageManager.LANG_HI) }
+        btnLangKn.setOnClickListener { changeLanguage(LanguageManager.LANG_KN) }
+    }
+
+    private fun updateLanguageSelectionUi(langCode: String) {
+        rgLanguageSelector?.setOnCheckedChangeListener(null)
+        when (langCode) {
+            LanguageManager.LANG_HI -> {
+                rbLangHi?.isChecked = true
+                rbLangEn?.isChecked = false
+                rbLangKn?.isChecked = false
+            }
+            LanguageManager.LANG_KN -> {
+                rbLangKn?.isChecked = true
+                rbLangEn?.isChecked = false
+                rbLangHi?.isChecked = false
+            }
+            else -> {
+                rbLangEn?.isChecked = true
+                rbLangHi?.isChecked = false
+                rbLangKn?.isChecked = false
+            }
+        }
+        rgLanguageSelector?.setOnCheckedChangeListener { _, checkedId ->
+            val targetLang = when (checkedId) {
+                R.id.rb_lang_hi -> LanguageManager.LANG_HI
+                R.id.rb_lang_kn -> LanguageManager.LANG_KN
+                else -> LanguageManager.LANG_EN
+            }
+            if (targetLang != LanguageManager.getLanguage(this)) {
+                changeLanguage(targetLang)
+            }
+        }
+
+        val activeBg = ContextCompat.getColor(this, R.color.brand_primary)
+        val activeText = ContextCompat.getColor(this, R.color.white)
+        val inactiveText = ContextCompat.getColor(this, R.color.text_primary)
+
+        val isEn = langCode == LanguageManager.LANG_EN
+        val isHi = langCode == LanguageManager.LANG_HI
+        val isKn = langCode == LanguageManager.LANG_KN
+
+        btnLangEn.setBackgroundColor(if (isEn) activeBg else Color.TRANSPARENT)
+        btnLangEn.setTextColor(if (isEn) activeText else inactiveText)
+
+        btnLangHi.setBackgroundColor(if (isHi) activeBg else Color.TRANSPARENT)
+        btnLangHi.setTextColor(if (isHi) activeText else inactiveText)
+
+        btnLangKn.setBackgroundColor(if (isKn) activeBg else Color.TRANSPARENT)
+        btnLangKn.setTextColor(if (isKn) activeText else inactiveText)
     }
 
     private fun changeLanguage(langCode: String) {
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_APP_LANGUAGE, langCode).apply()
-
-        val locale = Locale(langCode)
-        Locale.setDefault(locale)
-        val config = resources.configuration
-        config.setLocale(locale)
-        resources.updateConfiguration(config, resources.displayMetrics)
+        val current = LanguageManager.getLanguage(this)
+        if (current == langCode) return
+        LanguageManager.setLanguage(this, langCode)
+        updateLanguageSelectionUi(langCode)
         recreate()
     }
 
@@ -1326,6 +1406,11 @@ class MainActivity : AppCompatActivity() {
     override fun onUserInteraction() {
         super.onUserInteraction()
         lastInteractionTimestamp = System.currentTimeMillis()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("KEY_ACTIVE_TAB", currentTab)
     }
 
     override fun onPause() {

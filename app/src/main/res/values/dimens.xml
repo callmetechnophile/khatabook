@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Rural-First Accessible Typography Scale (SP) -->
+    <!-- Screen Titles: 24-28sp -->
+    <dimen name="text_screen_title">26sp</dimen>
+    <dimen name="text_card_header">20sp</dimen>
+    
+    <!-- Primary Financial Balance Amounts: 30-36sp -->
+    <dimen name="text_primary_amount">34sp</dimen>
+    <dimen name="text_secondary_amount">22sp</dimen>
+    
+    <!-- Primary Action Button Labels: 18-20sp -->
+    <dimen name="text_primary_action">19sp</dimen>
+    <dimen name="text_secondary_action">16sp</dimen>
+    
+    <!-- Customer Names & List Headers: 18-20sp -->
+    <dimen name="text_customer_name">19sp</dimen>
+    
+    <!-- Body Text: 16-18sp -->
+    <dimen name="text_body_primary">17sp</dimen>
+    <dimen name="text_body_secondary">15sp</dimen>
+    
+    <!-- Badges, Metadata & Supporting Descriptions: Never below 14sp -->
+    <dimen name="text_meta_badge">14sp</dimen>
+    <dimen name="text_caption">14sp</dimen>
+
+    <!-- Touch Target Dimensions (DP) -->
+    <!-- Primary Action Buttons: >= 56dp -->
+    <dimen name="touch_target_primary_button">58dp</dimen>
+    <dimen name="touch_target_secondary_button">48dp</dimen>
+    <dimen name="touch_target_min">48dp</dimen>
+    
+    <!-- Large Mic Voice Button: 68dp -->
+    <dimen name="touch_target_mic_button">68dp</dimen>
+    <dimen name="bottom_nav_height">64dp</dimen>
+
+    <!-- Layout Spacing & Paddings -->
+    <dimen name="spacing_micro">4dp</dimen>
+    <dimen name="spacing_small">8dp</dimen>
+    <dimen name="spacing_medium">16dp</dimen>
+    <dimen name="spacing_large">24dp</dimen>
+    <dimen name="spacing_xlarge">32dp</dimen>
+
+    <!-- Card Radii & Elevations -->
+    <dimen name="card_corner_radius">16dp</dimen>
+    <dimen name="button_corner_radius">14dp</dimen>
+    <dimen name="card_elevation">2dp</dimen>
+</resources>

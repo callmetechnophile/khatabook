@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">खातावास</string>
+    <string name="app_subtitle">डिजिटल उधार बही-खाता</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_home">होम</string>
+    <string name="nav_customers">ग्राहक</string>
+    <string name="nav_history">इतिहास</string>
+    <string name="nav_assistant">सहायक</string>
+    <string name="nav_settings">सेटिंग्स</string>
+
+    <!-- Primary Financial Actions -->
+    <string name="action_give_credit">उधार दिया (+)</string>
+    <string name="action_give_credit_sub">ग्राहक के खाते में जोड़ें</string>
+    <string name="action_receive_payment">भुगतान मिला (-)</string>
+    <string name="action_receive_payment_sub">खाते से कम करें</string>
+    <string name="action_voice_transaction">बोलकर खाता</string>
+    <string name="action_voice_transaction_sub">बोलकर एंट्री करें</string>
+    <string name="action_tap_to_speak">बोलने के लिए दबाएं</string>
+    <string name="action_tap_to_stop">रोकने के लिए दबाएं</string>
+    <string name="action_hold_to_speak">बोलने के लिए दबाएं</string>
+    <string name="action_listening">रिकॉर्डिंग हो रही है…</string>
+    <string name="action_processing">प्रोसेस हो रहा है…</string>
+
+    <!-- Overview Card -->
+    <string name="label_total_outstanding">कुल बाकी उधार</string>
+    <string name="label_debtor_count">%d ग्राहकों का पैसा बाकी है</string>
+    <string name="label_today_activity">आज: %s जमा हुआ</string>
+
+    <!-- Privacy & Security -->
+    <string name="privacy_locked">🔒 संवेदनशील जानकारी छिपाई गई</string>
+    <string name="privacy_locked_sub">रकम छिपी है (###XXX)</string>
+    <string name="privacy_unlocked">🔓 खाता खुला है</string>
+    <string name="privacy_unlocked_sub">लॉक करने के लिए दबाएं</string>
+    <string name="btn_unlock">खोलें</string>
+    <string name="btn_lock">बंद करें</string>
+
+    <!-- Cloud Sync Status -->
+    <string name="sync_status_synced">☁ सारा रिकॉर्ड सुरक्षित है</string>
+    <string name="sync_status_pending">☁ %d रिकॉर्ड सिंक बाकी</string>
+    <string name="sync_status_syncing">☁ बैकअप हो रहा है…</string>
+    <string name="sync_status_failed">⚠️ बैकअप असफल • पुनः प्रयास करें</string>
+    <string name="sync_status_offline">⚡ ऑफलाइन मोड (फोन में सुरक्षित)</string>
+    <string name="btn_sync_now">बैकअप लें</string>
+
+    <!-- Recent Activity & History -->
+    <string name="label_recent_transactions">हाल के लेनदेन</string>
+    <string name="label_view_all">पूरा इतिहास देखें →</string>
+    <string name="filter_all">सभी</string>
+    <string name="filter_credit">उधार (+)</string>
+    <string name="filter_debit">जमा (-)</string>
+    <string name="filter_stuck">फंसा हुआ</string>
+    <string name="filter_illegal">अमान्य</string>
+    <string name="empty_transactions_title">अभी कोई लेनदेन नहीं है</string>
+    <string name="empty_transactions_sub">उधार दें या बोलकर पहली एंट्री जोड़ें।</string>
+
+    <!-- Customers -->
+    <string name="search_customer_hint">ग्राहक का नाम खोजें…</string>
+    <string name="btn_add_customer">+ नया ग्राहक जोड़ें</string>
+    <string name="sort_by_balance">क्रम: अधिक बाकी पहले</string>
+    <string name="sort_by_name">क्रम: नाम (अ-ह)</string>
+    <string name="empty_customers_title">कोई ग्राहक नहीं मिला</string>
+    <string name="empty_customers_sub">उधार और भुगतान जोड़ने के लिए ग्राहक जोड़ें।</string>
+
+    <!-- Fast Transaction Dialog -->
+    <string name="dialog_credit_title">ग्राहक को उधार दिया</string>
+    <string name="dialog_payment_title">ग्राहक से भुगतान मिला</string>
+    <string name="field_customer_name">ग्राहक का नाम</string>
+    <string name="field_amount_rupees">रकम (₹)</string>
+    <string name="field_note_optional">सामान / विवरण (वैकल्पिक)</string>
+    <string name="btn_save_transaction">खाते में सहेजें</string>
+    <string name="btn_cancel">रद्द करें</string>
+
+    <!-- Voice Recording & Playback Interface -->
+    <string name="voice_recorder_title">आवाज रिकॉर्डिंग</string>
+    <string name="voice_playback_play">सुनें</string>
+    <string name="voice_playback_pause">रोकें</string>
+    <string name="voice_playback_replay">दोबारा सुनें</string>
+    <string name="voice_playback_discard">हटाएं</string>
+    <string name="voice_playback_confirm">पुष्टि करें और सहेजें</string>
+    <string name="voice_detected_lang">पहचानी गई भाषा: %s</string>
+    <string name="voice_recording_duration">अवधि: %s</string>
+    <string name="voice_status_ready">बोलने के लिए माइक दबाएं</string>
+    <string name="voice_status_recording">रिकॉर्डिंग जारी है… पूरा होने पर माइक दबाएं</string>
+    <string name="voice_status_review">रिकॉर्डिंग सुनकर एंट्री की पुष्टि करें</string>
+
+    <!-- Voice Confirmation Dialog -->
+    <string name="voice_confirm_title">आवाज एंट्री की पुष्टि करें</string>
+    <string name="voice_confirm_customer">ग्राहक: %s</string>
+    <string name="voice_confirm_amount">रकम: %s</string>
+    <string name="voice_confirm_direction">प्रकार: %s</string>
+    <string name="btn_confirm_save">पुष्टि करें और सहेजें</string>
+
+    <!-- Settings -->
+    <string name="settings_language">भाषा (Language)</string>
+    <string name="settings_security">सुरक्षा और गोपनीयता</string>
+    <string name="settings_cloud">SurrealDB क्लाउड बैकअप</string>
+    <string name="settings_noise_filter">शोर फ़िल्टर (Noise Filter)</string>
+    <string name="settings_ai_disclosure">आवाज और AI गोपनीयता</string>
+    <string name="settings_clear_data">खाता डेटा रीसेट करें</string>
+    <string name="settings_lang_english">English (अंग्रेजी)</string>
+    <string name="settings_lang_hindi">हिन्दी (Hindi)</string>
+    <string name="settings_lang_kannada">ಕನ್ನಡ (Kannada)</string>
+</resources>

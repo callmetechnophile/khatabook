@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ಖಾತಾವಾಸ್</string>
+    <string name="app_subtitle">ಡಿಜಿಟಲ್ ಉದ್ರಿ ಬಹಿ-ಖಾತಾ</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_home">ಮುಖಪುಟ</string>
+    <string name="nav_customers">ಗ್ರಾಹಕರು</string>
+    <string name="nav_history">ಇತಿಹಾಸ</string>
+    <string name="nav_assistant">ಸಹಾಯಕ</string>
+    <string name="nav_settings">ಸೆಟ್ಟಿಂಗ್ಸ್</string>
+
+    <!-- Primary Financial Actions -->
+    <string name="action_give_credit">ಉದ್ರಿ ಕೊಟ್ಟಿದ್ದು (+)</string>
+    <string name="action_give_credit_sub">ಖಾತೆಗೆ ಮೊತ್ತ ಸೇರಿಸಿ</string>
+    <string name="action_receive_payment">ಹಣ ಬಂದಿದ್ದು (-)</string>
+    <string name="action_receive_payment_sub">ಖಾತೆಯಿಂದ ಕಳೆಯಿರಿ</string>
+    <string name="action_voice_transaction">ಧ್ವನಿ ಖಾತಾ</string>
+    <string name="action_voice_transaction_sub">ಮಾತನಾಡಿ ದಾಖಲಿಸಿ</string>
+    <string name="action_tap_to_speak">ಮಾತನಾಡಲು ಒತ್ತಿ</string>
+    <string name="action_tap_to_stop">ನಿಲ್ಲಿಸಲು ಒತ್ತಿ</string>
+    <string name="action_hold_to_speak">ಮಾತನಾಡಲು ಒತ್ತಿ</string>
+    <string name="action_listening">ರೆಕಾರ್ಡಿಂಗ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="action_processing">ಪ್ರಕ್ರಿಯೆ ನಡೆಯುತ್ತಿದೆ…</string>
+
+    <!-- Overview Card -->
+    <string name="label_total_outstanding">ಒಟ್ಟು ಬಾಕಿ ಉದ್ರಿ</string>
+    <string name="label_debtor_count">%d ಗ್ರಾಹಕರಿಂದ ಬಾಕಿ ಬರಬೇಕಿದೆ</string>
+    <string name="label_today_activity">ಇಂದು: %s ಸಂಗ್ರಹವಾಗಿದೆ</string>
+
+    <!-- Privacy & Security -->
+    <string name="privacy_locked">🔒 ಸೂಕ್ಷ್ಮ ಮಾಹಿತಿ ಮರೆಮಾಡಲಾಗಿದೆ</string>
+    <string name="privacy_locked_sub">ಮೊತ್ತ ಮರೆಮಾಡಲಾಗಿದೆ (###XXX)</string>
+    <string name="privacy_unlocked">🔓 ಖಾತಾ ತೆರೆದಿದೆ</string>
+    <string name="privacy_unlocked_sub">ಲಾಕ್ ಮಾಡಲು ಒತ್ತಿ</string>
+    <string name="btn_unlock">ಅನ್‌ಲಾಕ್</string>
+    <string name="btn_lock">ಲಾಕ್</string>
+
+    <!-- Cloud Sync Status -->
+    <string name="sync_status_synced">☁ ಎಲ್ಲಾ ದಾಖಲೆ ಬ್ಯಾಕಪ್ ಆಗಿದೆ</string>
+    <string name="sync_status_pending">☁ %d ದಾಖಲೆಗಳು ಸಿಂಕ್ ಬಾಕಿ</string>
+    <string name="sync_status_syncing">☁ ಬ್ಯಾಕಪ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="sync_status_failed">⚠️ ಬ್ಯಾಕಪ್ ವಿಫಲ • ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ</string>
+    <string name="sync_status_offline">⚡ ಆಫ್‌ಲೈನ್ ಮೋಡ್ (ಫೋನ್‌ನಲ್ಲಿ ಸುರಕ್ಷಿತ)</string>
+    <string name="btn_sync_now">ಈಗ ಬ್ಯಾಕಪ್ ಮಾಡಿ</string>
+
+    <!-- Recent Activity & History -->
+    <string name="label_recent_transactions">ಇತ್ತೀಚಿನ ವಹಿವಾಟುಗಳು</string>
+    <string name="label_view_all">ಎಲ್ಲಾ ಇತಿಹಾಸ ನೋಡಿ →</string>
+    <string name="filter_all">ಎಲ್ಲಾ</string>
+    <string name="filter_credit">ಉದ್ರಿ (+)</string>
+    <string name="filter_debit">ಪಾವತಿ (-)</string>
+    <string name="filter_stuck">ಅಂಟಿಕೊಂಡಿದೆ</string>
+    <string name="filter_illegal">ಅಮಾನ್ಯ</string>
+    <string name="empty_transactions_title">ಯಾವುದೇ ವಹಿವಾಟು ದಾಖಲಾಗಿಲ್ಲ</string>
+    <string name="empty_transactions_sub">ಮೊದಲ ಎಂಟ್ರಿ ಸೇರಿಸಲು ಉದ್ರಿ ಕೊಡಿ ಅಥವಾ ಮಾತನಾಡಿ.</string>
+
+    <!-- Customers -->
+    <string name="search_customer_hint">ಗ್ರಾಹಕರ ಹೆಸರು ಹುಡುಕಿ…</string>
+    <string name="btn_add_customer">+ ಹೊಸ ಗ್ರಾಹಕರನ್ನು ಸೇರಿಸಿ</string>
+    <string name="sort_by_balance">ಕ್ರಮ: ಹೆಚ್ಚು ಬಾಕಿ ಮೊದಲು</string>
+    <string name="sort_by_name">ಕ್ರಮ: ಹೆಸರು (ಅ-ಹ)</string>
+    <string name="empty_customers_title">ಯಾವ ಗ್ರಾಹಕರೂ ಸಿಗಲಿಲ್ಲ</string>
+    <string name="empty_customers_sub">ಉದ್ರಿ ಮತ್ತು ಪಾವತಿ ಟ್ರ್ಯಾಕ್ ಮಾಡಲು ಗ್ರಾಹಕರನ್ನು ಸೇರಿಸಿ.</string>
+
+    <!-- Fast Transaction Dialog -->
+    <string name="dialog_credit_title">ಗ್ರಾಹಕರಿಗೆ ಉದ್ರಿ ನೀಡಿ</string>
+    <string name="dialog_payment_title">ಗ್ರಾಹಕರಿಂದ ಹಣ ಸ್ವೀಕರಿಸಿ</string>
+    <string name="field_customer_name">ಗ್ರಾಹಕರ ಹೆಸರು</string>
+    <string name="field_amount_rupees">ಮೊತ್ತ (₹)</string>
+    <string name="field_note_optional">ವಸ್ತು / ವಿವರ (ಐಚ್ಛಿಕ)</string>
+    <string name="btn_save_transaction">ಖಾತೆಗೆ ಉಳಿಸಿ</string>
+    <string name="btn_cancel">ರದ್ದುಮಾಡಿ</string>
+
+    <!-- Voice Recording & Playback Interface -->
+    <string name="voice_recorder_title">ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್</string>
+    <string name="voice_playback_play">ಪ್ಲೇ ಮಾಡಿ</string>
+    <string name="voice_playback_pause">ವಿರಾಮ</string>
+    <string name="voice_playback_replay">ಮತ್ತೆ ಪ್ಲೇ ಮಾಡಿ</string>
+    <string name="voice_playback_discard">ತೆಗೆದುಹಾಕಿ</string>
+    <string name="voice_playback_confirm">ದೃಢೀಕರಿಸಿ ಮತ್ತು ಉಳಿಸಿ</string>
+    <string name="voice_detected_lang">ಗುರುತಿಸಲಾದ ಭಾಷೆ: %s</string>
+    <string name="voice_recording_duration">ಅವಧಿ: %s</string>
+    <string name="voice_status_ready">ಮಾತನಾಡಲು ಮೈಕ್ರೊಫೋನ್ ಒತ್ತಿ</string>
+    <string name="voice_status_recording">ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ… ಮುಗಿದ ಮೇಲೆ ಮೈಕ್ ಒತ್ತಿ</string>
+    <string name="voice_status_review">ರೆಕಾರ್ಡಿಂಗ್ ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಖಾತೆಗೆ ಸೇರಿಸಿ</string>
+
+    <!-- Voice Confirmation Dialog -->
+    <string name="voice_confirm_title">ಧ್ವನಿ ಎಂಟ್ರಿ ದೃಢೀಕರಿಸಿ</string>
+    <string name="voice_confirm_customer">ಗ್ರಾಹಕ: %s</string>
+    <string name="voice_confirm_amount">ಮೊತ್ತ: %s</string>
+    <string name="voice_confirm_direction">ವಿಧ: %s</string>
+    <string name="btn_confirm_save">ದೃಢೀಕರಿಸಿ ಮತ್ತು ಉಳಿಸಿ</string>
+
+    <!-- Settings -->
+    <string name="settings_language">ಭಾಷೆ (Language)</string>
+    <string name="settings_security">ಭದ್ರತೆ ಮತ್ತು ಗೌಪ್ಯತೆ</string>
+    <string name="settings_cloud">SurrealDB ಕ್ಲೌಡ್ ಬ್ಯಾಕಪ್</string>
+    <string name="settings_noise_filter">ಹಿನ್ನೆಲೆ ಶಬ್ದ ಫಿಲ್ಟರ್ (Noise Filter)</string>
+    <string name="settings_ai_disclosure">ಧ್ವನಿ ಮತ್ತು AI ಗೌಪ್ಯತೆ</string>
+    <string name="settings_clear_data">ಖಾತಾ ಮಾಹಿತಿ ಮರುಹೊಂದಿಸಿ</string>
+    <string name="settings_lang_english">English (ಇಂಗ್ಲಿಷ್)</string>
+    <string name="settings_lang_hindi">हिन्दी (ಹಿಂದಿ)</string>
+    <string name="settings_lang_kannada">ಕನ್ನಡ (Kannada)</string>
+</resources>

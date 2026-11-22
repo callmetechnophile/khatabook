@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand & Theme Colors -->
+    <color name="primary">#0F766E</color>
+    <color name="primary_dark">#115E59</color>
+    <color name="primary_brand">#0F766E</color>
+    <color name="primary_brand_dark">#115E59</color>
+    <color name="primary_brand_light">#CCFBF1</color>
+    <color name="accent">#2457D6</color>
+    
+    <color name="bg_screen">#FAF8F5</color>
+    <color name="bg_panel">#FFFFFF</color>
+    <color name="surface_card">#FFFFFF</color>
+    <color name="bg_card_warm">#FFFDF9</color>
+    <color name="border_panel">#E7E5E4</color>
+    <color name="border_card_strong">#D6D3D1</color>
+    <color name="border_divider">#E2E8F0</color>
+
+    <!-- Typography (WCAG AAA >= 7:1) -->
+    <color name="text_primary">#1C1917</color>
+    <color name="text_secondary">#44403C</color>
+    <color name="text_muted">#78716C</color>
+    <color name="text_inverse">#FFFFFF</color>
+
+    <!-- Shopkeeper Perspective Financial Colors:
+         ========================================================================
+         1. GIVE UDHAR / ADD CREDIT: RED
+            Shopkeeper gives goods/credit. Customer outstanding balance increases.
+         ======================================================================== -->
+    <color name="btn_credit_bg">#D32F2F</color>          <!-- RED: Give Udhar button background -->
+    <color name="btn_credit_pressed">#B71C1C</color>
+    <color name="color_credit">#D32F2F</color>            <!-- RED: Udhar given / Outstanding balance -->
+    <color name="color_credit_bg">#FFEBEE</color>         <!-- Light RED background -->
+    <color name="badge_credit_bg">#FFEBEE</color>         <!-- Light RED badge -->
+    <color name="badge_credit_text">#C62828</color>       <!-- Dark RED badge text -->
+    <color name="badge_credit_border">#E57373</color>
+
+    <!-- ========================================================================
+         2. GOT PAYMENT / RECEIVE PAYMENT: GREEN
+            Shopkeeper receives money. Customer outstanding balance decreases.
+         ======================================================================== -->
+    <color name="btn_debit_bg">#2E7D32</color>           <!-- GREEN: Got Payment button background -->
+    <color name="btn_debit_pressed">#1B5E20</color>
+    <color name="color_debit">#2E7D32</color>             <!-- GREEN: Payment received / Advance -->
+    <color name="color_debit_bg">#E8F5E9</color>          <!-- Light GREEN background -->
+    <color name="badge_debit_bg">#E8F5E9</color>          <!-- Light GREEN badge -->
+    <color name="badge_debit_text">#1B5E20</color>        <!-- Dark GREEN badge text -->
+    <color name="badge_debit_border">#81C784</color>
+
+    <!-- 3. Stuck Category (Yellow / Amber) -->
+    <color name="color_stuck">#D97706</color>
+    <color name="badge_stuck_bg">#FFF8E1</color>
+    <color name="badge_stuck_text">#8D5B00</color>
+    <color name="badge_stuck_border">#FFD54F</color>
+
+    <!-- 4. Illegal Bank Payment Category (Grey) -->
+    <color name="color_illegal">#6B7280</color>
+    <color name="badge_illegal_bg">#ECEFF1</color>
+    <color name="badge_illegal_text">#263238</color>
+    <color name="badge_illegal_border">#90A4AE</color>
+
+    <!-- Voice Action Mic Button (Deep Indigo / Teal) -->
+    <color name="btn_mic_idle">#1E40AF</color>
+    <color name="btn_mic_recording">#D32F2F</color>
+    <color name="btn_mic_processing">#D97706</color>
+    <color name="mic_ripple">#93C5FD</color>
+
+    <!-- Bottom Navigation -->
+    <color name="nav_bar_bg">#FFFFFF</color>
+    <color name="nav_active_item">#0F766E</color>
+    <color name="nav_inactive_item">#78716C</color>
+</resources>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:background="@drawable/bg_rural_card"
+    android:elevation="1dp"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Top Row: Customer Name and Net Balance -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Avatar / Initial badge -->
+        <TextView
+            android:id="@+id/tv_customer_initial"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_badge_credit"
+            android:gravity="center"
+            android:textColor="@color/badge_credit_text"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:text="R" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_customer_row_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_customer_name"
+                android:textStyle="bold"
+                tools:text="Ravi ke papa" />
+
+            <TextView
+                android:id="@+id/tv_customer_row_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_caption"
+                tools:text="Last payment: 3 days ago" />
+        </LinearLayout>
+
+        <!-- Customer Outstanding Balance (RED for debt owed, GREEN for advance) -->
+        <TextView
+            android:id="@+id/tv_customer_row_balance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:gravity="end"
+            android:singleLine="true"
+            android:textColor="@color/btn_credit_bg"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            tools:text="₹1,500" />
+    </LinearLayout>
+
+    <!-- Quick 1-Tap Row Actions: Give Udhar (RED) or Got Payment (GREEN) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_row_give_credit"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/btn_credit_bg"
+            android:drawableStart="@drawable/ic_give_credit"
+            android:drawablePadding="6dp"
+            android:paddingHorizontal="12dp"
+            android:text="@string/action_give_credit"
+            android:textAllCaps="false"
+            android:textColor="@color/text_inverse"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_row_receive_payment"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/btn_debit_bg"
+            android:drawableStart="@drawable/ic_got_payment"
+            android:drawablePadding="6dp"
+            android:paddingHorizontal="12dp"
+            android:text="@string/action_receive_payment"
+            android:textAllCaps="false"
+            android:textColor="@color/text_inverse"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

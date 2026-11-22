@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/build.js",
     "start": "node server/index.js",
     "live-test": "node scripts/live-test.js",
     "rescore": "node scripts/rescore.js",

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Rural-First High-Contrast Palette (Dark Mode) -->
+    <color name="primary">#2DD4BF</color>
+    <color name="primary_dark">#14B8A6</color>
+    <color name="primary_brand">#2DD4BF</color>
+    <color name="primary_brand_dark">#14B8A6</color>
+    <color name="primary_brand_light">#134E4A</color>
+    <color name="accent">#60A5FA</color>
+    
+    <color name="bg_screen">#0C0A09</color>
+    <color name="bg_panel">#1C1917</color>
+    <color name="surface_card">#1C1917</color>
+    <color name="bg_card_warm">#1C1917</color>
+    <color name="border_panel">#292524</color>
+    <color name="border_card_strong">#44403C</color>
+    <color name="border_divider">#292524</color>
+
+    <!-- Typography -->
+    <color name="text_primary">#F5F5F4</color>
+    <color name="text_secondary">#D6D3D1</color>
+    <color name="text_muted">#A8A29E</color>
+    <color name="text_inverse">#0C0A09</color>
+
+    <!-- Shopkeeper Perspective Financial Colors:
+         GIVE UDHAR / CREDIT: RED
+         GOT PAYMENT / DEBIT: GREEN -->
+    <color name="btn_credit_bg">#EF4444</color>
+    <color name="btn_credit_pressed">#DC2626</color>
+    <color name="color_credit">#EF4444</color>
+    <color name="color_credit_bg">#450A0A</color>
+    <color name="badge_credit_bg">#450A0A</color>
+    <color name="badge_credit_text">#FCA5A5</color>
+    <color name="badge_credit_border">#B91C1C</color>
+
+    <color name="btn_debit_bg">#22C55E</color>
+    <color name="btn_debit_pressed">#16A34A</color>
+    <color name="color_debit">#22C55E</color>
+    <color name="color_debit_bg">#052E16</color>
+    <color name="badge_debit_bg">#052E16</color>
+    <color name="badge_debit_text">#86EFAC</color>
+    <color name="badge_debit_border">#15803D</color>
+
+    <!-- 3. Stuck Category (Yellow / Amber) -->
+    <color name="color_stuck">#F59E0B</color>
+    <color name="badge_stuck_bg">#451A03</color>
+    <color name="badge_stuck_text">#FCD34D</color>
+    <color name="badge_stuck_border">#B45309</color>
+
+    <!-- 4. Illegal Bank Payment Category (Grey) -->
+    <color name="color_illegal">#9CA3AF</color>
+    <color name="badge_illegal_bg">#1F2937</color>
+    <color name="badge_illegal_text">#D1D5DB</color>
+    <color name="badge_illegal_border">#4B5563</color>
+
+    <!-- Voice Action Mic Button -->
+    <color name="btn_mic_idle">#3B82F6</color>
+    <color name="btn_mic_recording">#EF4444</color>
+    <color name="btn_mic_processing">#F59E0B</color>
+    <color name="mic_ripple">#1E3A8A</color>
+
+    <!-- Bottom Navigation -->
+    <color name="nav_bar_bg">#1C1917</color>
+    <color name="nav_active_item">#2DD4BF</color>
+    <color name="nav_inactive_item">#A8A29E</color>
+</resources>

@@ -745,11 +745,81 @@
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
-                <!-- Language Selector Buttons -->
-                <LinearLayout
+                <!-- Authoritative Language Selection RadioGroup -->
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="2dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/border_card"
+                    app:cardBackgroundColor="@color/surface_card">
+
+                    <RadioGroup
+                        android:id="@+id/rg_language_selector"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp"
+                        android:orientation="vertical">
+
+                        <RadioButton
+                            android:id="@+id/rb_lang_en"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="@string/settings_lang_english"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"
+                            android:buttonTint="@color/brand_primary"
+                            android:contentDescription="Select English language"
+                            android:paddingStart="12dp" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/border_card"
+                            android:layout_marginHorizontal="8dp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_lang_hi"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="@string/settings_lang_hindi"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"
+                            android:buttonTint="@color/brand_primary"
+                            android:contentDescription="Select Hindi language"
+                            android:paddingStart="12dp" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/border_card"
+                            android:layout_marginHorizontal="8dp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_lang_kn"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="@string/settings_lang_kannada"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"
+                            android:buttonTint="@color/brand_primary"
+                            android:contentDescription="Select Kannada language"
+                            android:paddingStart="12dp" />
+
+                    </RadioGroup>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Language Selector Buttons (Synchronized) -->
+                <LinearLayout
+                    android:id="@+id/layout_quick_lang_buttons"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
                     android:orientation="horizontal">
 
                     <Button

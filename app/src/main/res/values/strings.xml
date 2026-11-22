@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KHATAWAS</string>
+    <string name="app_subtitle">Digital Udhaar Bahi-Khata</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_home">Home</string>
+    <string name="nav_customers">Customers</string>
+    <string name="nav_history">History</string>
+    <string name="nav_assistant">Assistant</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Primary Financial Actions -->
+    <string name="action_give_credit">Give Udhaar (+)</string>
+    <string name="action_give_credit_sub">Add to customer balance</string>
+    <string name="action_receive_payment">Got Payment (-)</string>
+    <string name="action_receive_payment_sub">Deduct from balance</string>
+    <string name="action_voice_transaction">Voice Khata</string>
+    <string name="action_voice_transaction_sub">Speak transaction</string>
+    <string name="action_tap_to_speak">TAP TO SPEAK</string>
+    <string name="action_tap_to_stop">TAP TO STOP</string>
+    <string name="action_hold_to_speak">TAP TO SPEAK</string>
+    <string name="action_listening">RECORDING…</string>
+    <string name="action_processing">PROCESSING…</string>
+
+    <!-- Overview Card -->
+    <string name="label_total_outstanding">Total Outstanding Udhaar</string>
+    <string name="label_debtor_count">%d customers owe money</string>
+    <string name="label_today_activity">Today: %s collected</string>
+
+    <!-- Privacy & Security -->
+    <string name="privacy_locked">🔒 SENSITIVE DATA MASKED</string>
+    <string name="privacy_locked_sub">Amounts hidden (###XXX)</string>
+    <string name="privacy_unlocked">🔓 LEDGER UNLOCKED</string>
+    <string name="privacy_unlocked_sub">Tap to lock display</string>
+    <string name="btn_unlock">UNLOCK</string>
+    <string name="btn_lock">LOCK</string>
+
+    <!-- Cloud Sync Status -->
+    <string name="sync_status_synced">☁ All Records Backed Up</string>
+    <string name="sync_status_pending">☁ %d Unsynced Records</string>
+    <string name="sync_status_syncing">☁ Backing up to cloud…</string>
+    <string name="sync_status_failed">⚠️ Backup Failed • Tap to Retry</string>
+    <string name="sync_status_offline">⚡ Offline Mode (Local Safe)</string>
+    <string name="btn_sync_now">BACKUP NOW</string>
+
+    <!-- Recent Activity & History -->
+    <string name="label_recent_transactions">Recent Ledger Entries</string>
+    <string name="label_view_all">View All History →</string>
+    <string name="filter_all">All</string>
+    <string name="filter_credit">Credit (+)</string>
+    <string name="filter_debit">Payment (-)</string>
+    <string name="filter_stuck">Stuck</string>
+    <string name="filter_illegal">Illegal</string>
+    <string name="empty_transactions_title">No transactions recorded yet</string>
+    <string name="empty_transactions_sub">Tap Give Udhaar or speak to add your first entry.</string>
+
+    <!-- Customers -->
+    <string name="search_customer_hint">Search customer by name…</string>
+    <string name="btn_add_customer">+ Add New Customer</string>
+    <string name="sort_by_balance">Sort: Balance (Highest)</string>
+    <string name="sort_by_name">Sort: Name (A-Z)</string>
+    <string name="empty_customers_title">No customers found</string>
+    <string name="empty_customers_sub">Add a customer to track credit and payments.</string>
+
+    <!-- Fast Transaction Dialog -->
+    <string name="dialog_credit_title">Give Udhaar to Customer</string>
+    <string name="dialog_payment_title">Receive Customer Payment</string>
+    <string name="field_customer_name">Customer Name</string>
+    <string name="field_amount_rupees">Amount (₹)</string>
+    <string name="field_note_optional">Item / Note (Optional)</string>
+    <string name="btn_save_transaction">SAVE TO KHATA</string>
+    <string name="btn_cancel">Cancel</string>
+
+    <!-- Voice Recording & Playback Interface -->
+    <string name="voice_recorder_title">Voice Recording</string>
+    <string name="voice_playback_play">Play</string>
+    <string name="voice_playback_pause">Pause</string>
+    <string name="voice_playback_replay">Replay</string>
+    <string name="voice_playback_discard">Discard</string>
+    <string name="voice_playback_confirm">Confirm &amp; Save</string>
+    <string name="voice_detected_lang">Detected Language: %s</string>
+    <string name="voice_recording_duration">Duration: %s</string>
+    <string name="voice_status_ready">Tap microphone to start speaking</string>
+    <string name="voice_status_recording">Recording… tap microphone when done</string>
+    <string name="voice_status_review">Review your recording and confirm entry</string>
+
+    <!-- Voice Confirmation Dialog -->
+    <string name="voice_confirm_title">Confirm Voice Entry</string>
+    <string name="voice_confirm_customer">Customer: %s</string>
+    <string name="voice_confirm_amount">Amount: %s</string>
+    <string name="voice_confirm_direction">Type: %s</string>
+    <string name="btn_confirm_save">CONFIRM &amp; SAVE</string>
+
+    <!-- Settings -->
+    <string name="settings_language">Language / भाषा / ಭಾಷೆ</string>
+    <string name="settings_security">Security &amp; Privacy</string>
+    <string name="settings_cloud">SurrealDB Cloud Sync</string>
+    <string name="settings_noise_filter">Background Noise Filter</string>
+    <string name="settings_ai_disclosure">Voice &amp; AI Privacy Disclosure</string>
+    <string name="settings_clear_data">Reset / Clear Ledger Data</string>
+    <string name="settings_lang_english">English</string>
+    <string name="settings_lang_hindi">हिन्दी (Hindi)</string>
+    <string name="settings_lang_kannada">ಕನ್ನಡ (Kannada)</string>
+</resources>

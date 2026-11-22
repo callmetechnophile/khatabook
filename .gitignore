@@ -25,3 +25,15 @@ public/_demo/
 .claude/
 skills-lock.json
 .DS_Store
+
+.vercel
+ui_*.xml
+rural_*.png
+screen_*.png
+rust-engine/target/
+release/
+*.keystore
+*.jks
+*.whl
+__pycache__/
+*.pyc
