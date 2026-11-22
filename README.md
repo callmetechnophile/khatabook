@@ -1,4 +1,4 @@
-# KHATAWAS — The Voice Ledger for Kirana Stores
+# KHATABOOK — The Voice Ledger for Kirana Stores
 
 > Push-to-talk. Say it once, the khata is updated. No typing, no tapping, no stopping the sale.
 
