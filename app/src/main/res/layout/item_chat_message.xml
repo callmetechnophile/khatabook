@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:textColor="#FFFFFF"
             android:textSize="15sp"
-            tools:text="What is Ravi's balance?" />
+            tools:text="Question" />
 
         <TextView
             android:id="@+id/tv_user_time"
@@ -87,7 +87,7 @@
             android:lineSpacingExtra="3dp"
             android:textColor="@color/text_primary"
             android:textSize="15sp"
-            tools:text="Ravi currently owes ₹1,250 based on recorded transactions." />
+            tools:text="Answer" />
 
         <!-- Grounded Source Indicator Badge -->
         <TextView

@@ -45,7 +45,7 @@
             android:layout_height="52dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_panel"
-            android:hint="Type customer name (e.g. Ravi)"
+            android:hint="Type customer name"
             android:inputType="textPersonName"
             android:paddingHorizontal="14dp"
             android:textColor="@color/text_primary"

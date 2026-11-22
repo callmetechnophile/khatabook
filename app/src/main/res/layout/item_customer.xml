@@ -26,7 +26,7 @@
             android:textColor="@color/badge_credit_text"
             android:textSize="20sp"
             android:textStyle="bold"
-            tools:text="R" />
+            tools:text="" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -44,7 +44,7 @@
                 android:textColor="@color/text_primary"
                 android:textSize="@dimen/text_customer_name"
                 android:textStyle="bold"
-                tools:text="Ravi ke papa" />
+                tools:text="Customer Name" />
 
             <TextView
                 android:id="@+id/tv_customer_row_subtitle"
@@ -53,7 +53,7 @@
                 android:layout_marginTop="2dp"
                 android:textColor="@color/text_secondary"
                 android:textSize="@dimen/text_caption"
-                tools:text="Last payment: 3 days ago" />
+                tools:text="" />
         </LinearLayout>
 
         <!-- Customer Outstanding Balance (RED for debt owed, GREEN for advance) -->
@@ -67,7 +67,7 @@
             android:textColor="@color/btn_credit_bg"
             android:textSize="22sp"
             android:textStyle="bold"
-            tools:text="₹1,500" />
+            tools:text="₹0" />
     </LinearLayout>
 
     <!-- Quick 1-Tap Row Actions: Give Udhar (RED) or Got Payment (GREEN) -->

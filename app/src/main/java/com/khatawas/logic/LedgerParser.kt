@@ -53,7 +53,7 @@ sealed class ParseResult {
 
 /**
  * Deterministic Kirana ledger parser.
- * Supports both Devanagari script (e.g. "रमेश का 340 उधार") and Latin transliteration ("Ramesh ka 340 udhaar").
+ * Supports both Devanagari script (e.g. "<Customer> का <Amount> उधार") and Latin transliteration ("<Customer> ka <Amount> udhaar").
  * Strictly rejects pronouns ("iska", "uska", "इसका", "उसका") as customer names.
  */
 object LedgerParser {
@@ -226,7 +226,7 @@ object LedgerParser {
 
         val lower = trimmed.lowercase(Locale.ROOT)
 
-        // 1. Reversal detection: "Ramesh ka hisaab cancel karo", "रमेश का उधार रद्द करो", "wapas karo"
+        // 1. Reversal detection: "<Customer> ka hisaab cancel karo", "<Customer> ka udhaar radd karo", "wapas karo"
         if (lower.contains("cancel") || lower.contains("radd") || lower.contains("wapas") || lower.contains("hatao") ||
             trimmed.contains("रद्द") || trimmed.contains("वापस") || trimmed.contains("हटाओ") || trimmed.contains("कैंसिल")
         ) {
@@ -268,7 +268,7 @@ object LedgerParser {
             return ParseResult.DailySummaryQuery(dateOffset, queryType)
         }
 
-        // 5. Customer balance query: "Ramesh ka hisaab batao" / "रमेश का हिसाब बताओ" / "Ramesh ka total kitna hai"
+        // 5. Customer balance query: "<Customer> ka hisaab batao" / "<Customer> ka total kitna hai"
         if (lower.contains("kitna") || lower.contains("hisaab") || lower.contains("balance") || lower.contains("batao") || lower.contains("total") ||
             trimmed.contains("कितना") || trimmed.contains("हिसाब") || trimmed.contains("बताओ") || trimmed.contains("टोटल")
         ) {
@@ -279,7 +279,7 @@ object LedgerParser {
         }
 
         // 3. Multi-clause split: handles compound sentences like:
-        // "Ramesh ka 340 udhaar, kal 200 diya tha" or "रमेश का 340 उधार, कल 200 दिया था"
+        // "<Customer> ka 500 udhaar, kal 200 diya tha" (compound multi-clause input)
         val clauses = splitClauses(trimmed)
         val defaultCustomer = extractCustomerName(trimmed)
 

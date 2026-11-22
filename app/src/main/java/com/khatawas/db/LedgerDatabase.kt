@@ -566,7 +566,7 @@ class LedgerDatabase(private val context: Context) : SQLiteOpenHelper(
     }
 
     /**
-     * Reverse a transaction for a customer (e.g. "Ramesh ka cancel karo").
+     * Reverse a transaction for a customer (e.g. "<Customer> ka cancel karo").
      * Inserts an explicit REVERSAL transaction preserving the audit trail.
      */
     fun reverseTransaction(customerName: String, amountPaise: Long = 0L): Boolean {

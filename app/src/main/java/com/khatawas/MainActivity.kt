@@ -157,6 +157,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnAddCustomerScreen: Button
     private lateinit var rvCustomerList: RecyclerView
     private lateinit var customerAdapter: CustomerAdapter
+    private lateinit var llCustomersEmptyState: LinearLayout
+    private lateinit var llHistoryEmptyState: LinearLayout
     private var fullCustomerList: List<CustomerUiModel> = emptyList()
 
     // Tab 3: History Tab Filter Chips & List
@@ -492,6 +494,7 @@ class MainActivity : AppCompatActivity() {
         etCustomerSearch = findViewById(R.id.et_customer_search)
         btnAddCustomerScreen = findViewById(R.id.btn_add_customer_screen)
         rvCustomerList = findViewById(R.id.rv_customer_list)
+        llCustomersEmptyState = findViewById(R.id.ll_customers_empty_state)
 
         customerAdapter = CustomerAdapter(
             isUnlocked = PrivacyManager.isUnlocked,
@@ -530,6 +533,7 @@ class MainActivity : AppCompatActivity() {
         chipFilterStuck = findViewById(R.id.chip_filter_stuck)
         chipFilterIllegal = findViewById(R.id.chip_filter_illegal)
         rvHistoryTabTransactions = findViewById(R.id.rv_history_tab_transactions)
+        llHistoryEmptyState = findViewById(R.id.ll_history_empty_state)
 
         historyTransactionAdapter = TransactionAdapter(
             isUnlocked = PrivacyManager.isUnlocked,
@@ -750,18 +754,32 @@ class MainActivity : AppCompatActivity() {
             fullCustomerList = models
             runOnUiThread {
                 customerAdapter.submitList(models)
+                if (models.isEmpty()) {
+                    llCustomersEmptyState.visibility = View.VISIBLE
+                    rvCustomerList.visibility = View.GONE
+                } else {
+                    llCustomersEmptyState.visibility = View.GONE
+                    rvCustomerList.visibility = View.VISIBLE
+                }
             }
         }
     }
 
     private fun filterCustomerList(query: String) {
-        if (query.isBlank()) {
-            customerAdapter.submitList(fullCustomerList)
+        val targetList = if (query.isBlank()) {
+            fullCustomerList
         } else {
-            val filtered = fullCustomerList.filter {
+            fullCustomerList.filter {
                 it.name.contains(query, ignoreCase = true)
             }
-            customerAdapter.submitList(filtered)
+        }
+        customerAdapter.submitList(targetList)
+        if (targetList.isEmpty()) {
+            llCustomersEmptyState.visibility = View.VISIBLE
+            rvCustomerList.visibility = View.GONE
+        } else {
+            llCustomersEmptyState.visibility = View.GONE
+            rvCustomerList.visibility = View.VISIBLE
         }
     }
 
@@ -796,6 +814,13 @@ class MainActivity : AppCompatActivity() {
 
             runOnUiThread {
                 historyTransactionAdapter.submitList(uiModels)
+                if (uiModels.isEmpty()) {
+                    llHistoryEmptyState.visibility = View.VISIBLE
+                    rvHistoryTabTransactions.visibility = View.GONE
+                } else {
+                    llHistoryEmptyState.visibility = View.GONE
+                    rvHistoryTabTransactions.visibility = View.VISIBLE
+                }
             }
         }
     }
@@ -888,10 +913,12 @@ class MainActivity : AppCompatActivity() {
                     tvSyncSubtitle.text = "${state.unsyncedCount} unsynced local record(s) · Tap sync to backup"
                 } else {
                     tvSyncStatus.text = "☁ SURREALDB CLOUD"
-                    val timeStr = if (state.lastSyncedTimestamp != null) {
-                        SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()).format(Date(state.lastSyncedTimestamp))
-                    } else "All records backed up"
-                    tvSyncSubtitle.text = "● All records backed up · Last sync: $timeStr"
+                    if (state.lastSyncedTimestamp != null) {
+                        val timeStr = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()).format(Date(state.lastSyncedTimestamp))
+                        tvSyncSubtitle.text = "● All records backed up · Last sync: $timeStr"
+                    } else {
+                        tvSyncSubtitle.text = "● Local ledger ready · No cloud backup yet"
+                    }
                 }
             }
             is SyncState.Syncing -> {
