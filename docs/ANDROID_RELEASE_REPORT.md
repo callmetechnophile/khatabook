@@ -131,12 +131,12 @@ The automated CI/CD pipeline is implemented in `.github/workflows/android-releas
 
 ### Required Repository Secrets:
 For full automated signing in GitHub Actions, configure the following secrets in `callmetechnophile/khatabook` under **Settings > Secrets and variables > Actions**:
-- `SIGNING_KEY`: Base64-encoded release `.keystore` / `.jks` file.
+- `ANDROID_KEYSTORE_BASE64`: Base64-encoded release `.keystore` / `.jks` file.
 - `KEY_ALIAS`: Keystore alias (e.g. `khatawas`).
 - `KEY_PASSWORD`: Key password.
 - `KEYSTORE_PASSWORD`: Keystore password.
 
-*(Note: If signing secrets are omitted, the workflow will publish the verified release APK output by Gradle).*
+*(Note: If repository signing secrets are omitted, the workflow automatically generates an ephemeral CI testing keystore to produce a fully signed and installable v2/v3 APK published as a GitHub Pre-release).*
 
 ---
 
