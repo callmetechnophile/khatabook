@@ -250,7 +250,8 @@ jobs:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: KHATAWAS ${{ steps.ver.outputs.tag }} — Android Testing Release
           draft: false
-          prerelease: true
+          prerelease: false
+          make_latest: true
           body: |
             ## KHATAWAS ${{ steps.ver.outputs.tag }} — Android Testing Release
 
